@@ -2,6 +2,10 @@
 
 This library offers a lightweight and developer-friendly abstraction over the FreJun Teler API.
 
+## What is Teler?
+
+Teler is a programmable voice API by FreJun. It handles carriers, phone numbers, and real-time audio streaming so you can connect AI models directly to phone calls. → [frejun.ai](https://frejun.ai)
+
 ## Basic Usage
 
 The built-in client interfaces provide methods for creating and managing Teler's REST resources.
