@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, fields
-from typing import Any, Dict, List, Type
+from abc import ABC
+from dataclasses import dataclass, field
+from dataclasses import fields as dataclass_fields
+from typing import Any, Dict, List, Optional, Type
 
 from .. import exceptions
 
@@ -11,12 +12,29 @@ class BaseResource(ABC):
 
     def __init__(self, data: Dict[str, Any]):
         # Match only declared fields; raise on extra keys
-        names = {f.name for f in fields(self)}
+        names = {f.name for f in dataclass_fields(self)}
         unknown = set(data) - names
         if unknown:
             raise TypeError(f"Unknown fields: {unknown}")
-        for field in names:
-            setattr(self, field, data.get(field))
+        for name in names:
+            setattr(self, name, data.get(name))
+
+
+@dataclass
+class CursorPage:
+    """A single page of cursor-paginated results.
+
+    Attributes:
+        data (List[Any]): The resource objects on this page.
+        next_cursor (Optional[str]): Cursor for the next page, if any.
+        previous_cursor (Optional[str]): Cursor for the previous page, if any.
+        has_more (bool): Whether more pages are available after this one.
+    """
+
+    data: List[Any] = field(default_factory=list)
+    next_cursor: Optional[str] = None
+    previous_cursor: Optional[str] = None
+    has_more: bool = False
 
 
 class BaseResourceManager(ABC):
@@ -29,8 +47,7 @@ class BaseResourceManager(ABC):
         self.resource = resource
         self.paths = paths
 
-    @abstractmethod
-    def create(self) -> BaseResource:
+    def create(self, *args, **kwargs) -> BaseResource:
         raise exceptions.NotImplementedException(
             msg="Method 'create()' is not implemented."
         )
@@ -78,8 +95,7 @@ class AsyncBaseResourceManager(ABC):
         self.resource = resource
         self.paths = paths
 
-    @abstractmethod
-    async def create(self) -> BaseResource:
+    async def create(self, *args, **kwargs) -> BaseResource:
         raise exceptions.NotImplementedException(
             msg="Method 'create()' is not implemented."
         )

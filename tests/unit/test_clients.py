@@ -3,6 +3,10 @@ import pytest
 
 from teler import AsyncClient, Client, exceptions
 from teler.resources.calls import AsyncCallResourceManager, CallResourceManager
+from teler.resources.events import (AsyncEventResourceManager,
+                                     EventResourceManager)
+from teler.resources.recordings import (AsyncRecordingResourceManager,
+                                         RecordingResourceManager)
 
 TEST_API_KEY = "TEST_API_KEY"
 
@@ -14,6 +18,8 @@ def test_client_init_sets_api_key_and_client_and_managers():
     assert client.api_key == TEST_API_KEY
     assert isinstance(client.httpx_client, httpx.Client)
     assert isinstance(client.calls, CallResourceManager)
+    assert isinstance(client.events, EventResourceManager)
+    assert isinstance(client.recordings, RecordingResourceManager)
 
 
 def test_client_init_missing_api_key_raises():
@@ -38,6 +44,8 @@ async def test_async_client_init_sets_api_key_and_client_and_managers():
     assert client.api_key == TEST_API_KEY
     assert isinstance(client.httpx_client, httpx.AsyncClient)
     assert isinstance(client.calls, AsyncCallResourceManager)
+    assert isinstance(client.events, AsyncEventResourceManager)
+    assert isinstance(client.recordings, AsyncRecordingResourceManager)
 
     await client.httpx_client.aclose()
 

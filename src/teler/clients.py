@@ -5,6 +5,10 @@ import httpx
 
 from teler import constants, exceptions
 from teler.resources.calls import AsyncCallResourceManager, CallResourceManager
+from teler.resources.events import (AsyncEventResourceManager,
+                                    EventResourceManager)
+from teler.resources.recordings import (AsyncRecordingResourceManager,
+                                        RecordingResourceManager)
 
 try:
     __version__ = metadata.version("teler")
@@ -53,6 +57,8 @@ class Client:
             **kwargs,
         )
         self.calls = CallResourceManager(self)
+        self.events = EventResourceManager(self)
+        self.recordings = RecordingResourceManager(self)
 
     def request(self, *args, **kwargs) -> httpx.Response:
         """
@@ -117,6 +123,8 @@ class AsyncClient:
             **kwargs,
         )
         self.calls = AsyncCallResourceManager(self)
+        self.events = AsyncEventResourceManager(self)
+        self.recordings = AsyncRecordingResourceManager(self)
 
     async def request(self, *args, **kwargs) -> httpx.Response:
         """
