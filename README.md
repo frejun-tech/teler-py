@@ -162,7 +162,7 @@ async def webhook_receiver(data: Annotated[dict, Body()]):
     logger.info(f"--------Webhook Payload-------- {data}")
     return JSONResponse(content="Webhook received.")
 
-@router.get("/initiate-call", status_code=status.HTTP_200_OK)
+@router.post("/initiate-call", status_code=status.HTTP_200_OK)
 async def initiate_call():
     """
     Initiate a call using Teler SDK.
