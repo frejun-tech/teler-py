@@ -78,6 +78,19 @@ def test_events_retrieve_returns_event_resource():
         assert event.delivery_status == "delivered"
 
 
+def test_events_retrieve_unwraps_data_envelope():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        respx_mock.get(f"{BASE}/events/evt_123").mock(
+            return_value=httpx.Response(200, json={"data": EVENT_JSON})
+        )
+        client = Client(api_key="test_api_key")
+
+        event = client.events.retrieve("evt_123")
+
+        assert isinstance(event, EventResource)
+        assert event.id == "evt_123"
+
+
 @pytest.mark.asyncio
 async def test_async_events_retrieve_returns_event_resource():
     with respx.mock(assert_all_called=False) as respx_mock:

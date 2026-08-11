@@ -25,6 +25,11 @@ class ForbiddenException(TelerException):
     code = 403
 
 
+class NotFoundException(TelerException):
+    message = "Not found."
+    code = 404
+
+
 class NotImplementedException(TelerException):
     message = "Not implemented."
     code = 501

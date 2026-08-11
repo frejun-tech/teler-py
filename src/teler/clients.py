@@ -21,6 +21,26 @@ DEFAULT_REQUEST_HEADERS = {
     "User-Agent": f"teler/{__version__} (python-sdk)",
 }
 
+STATUS_EXCEPTIONS = {
+    400: exceptions.BadParametersException,
+    401: exceptions.UnauthorizedException,
+    403: exceptions.ForbiddenException,
+    404: exceptions.NotFoundException,
+}
+
+
+def _raise_for_status(res: httpx.Response) -> None:
+    """
+    Map a non-2xx/3xx HTTP response to an SDK exception.
+
+    Only raises for status codes >= 400; redirects (3xx) pass through
+    untouched so recording downloads (302 + Location) keep working.
+    """
+    if res.status_code < 400:
+        return
+    exc = STATUS_EXCEPTIONS.get(res.status_code, exceptions.TelerException)
+    raise exc(msg=f"Request failed with status {res.status_code}.")
+
 
 class Client:
     """
@@ -65,8 +85,7 @@ class Client:
         Make a synchronous HTTP request using the underlying httpx.Client.
         """
         res = self.httpx_client.request(*args, **kwargs)
-        if res.status_code == 403:
-            raise exceptions.ForbiddenException()
+        _raise_for_status(res)
         return res
 
     def close(self):
@@ -131,8 +150,7 @@ class AsyncClient:
         Make an asynchronous HTTP request using the underlying httpx.AsyncClient.
         """
         res = await self.httpx_client.request(*args, **kwargs)
-        if res.status_code == 403:
-            raise exceptions.ForbiddenException()
+        _raise_for_status(res)
         return res
 
     async def aclose(self):

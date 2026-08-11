@@ -67,6 +67,13 @@ def _build_list_params(
     return {k: v for k, v in params.items() if v is not None}
 
 
+def _unwrap(body: Dict[str, Any]) -> Dict[str, Any]:
+    """Unwrap a ``{"data": {...}}`` envelope if present, else return body as-is."""
+    if isinstance(body, dict) and isinstance(body.get("data"), dict):
+        return body["data"]
+    return body
+
+
 def _to_cursor_page(body: Dict[str, Any]) -> CursorPage:
     """Wrap a raw list response body into a typed CursorPage of EventResource."""
     return CursorPage(
@@ -107,14 +114,14 @@ class EventResourceManager(BaseResourceManager):
         Retrieve a single webhook event by its id.
         """
         res = self.client.request("GET", self.paths["retrieve"].format(id))
-        return cast(EventResource, self.resource(res.json()))
+        return cast(EventResource, self.resource(_unwrap(res.json())))
 
     def redeliver(self, id) -> EventRedeliverResult:
         """
         Redeliver a webhook event by its id.
         """
         res = self.client.request("POST", self.paths["redeliver"].format(id))
-        return EventRedeliverResult(res.json())
+        return EventRedeliverResult(_unwrap(res.json()))
 
 
 class AsyncEventResourceManager(AsyncBaseResourceManager):
@@ -147,11 +154,11 @@ class AsyncEventResourceManager(AsyncBaseResourceManager):
         Asynchronously retrieve a single webhook event by its id.
         """
         res = await self.client.request("GET", self.paths["retrieve"].format(id))
-        return cast(EventResource, self.resource(res.json()))
+        return cast(EventResource, self.resource(_unwrap(res.json())))
 
     async def redeliver(self, id) -> EventRedeliverResult:
         """
         Asynchronously redeliver a webhook event by its id.
         """
         res = await self.client.request("POST", self.paths["redeliver"].format(id))
-        return EventRedeliverResult(res.json())
+        return EventRedeliverResult(_unwrap(res.json()))

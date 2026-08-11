@@ -26,6 +26,22 @@ def test_recordings_retrieve_returns_signed_url():
         assert rec.expires_in == 900
 
 
+def test_recordings_retrieve_accepts_json_body():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        respx_mock.get(f"{BASE}/recordings/").mock(
+            return_value=httpx.Response(
+                200, json={"url": SIGNED_URL, "expires_in": 600}
+            )
+        )
+        client = Client(api_key="test_api_key")
+
+        rec = client.recordings.retrieve("rec_123", expires_in=900)
+
+        assert isinstance(rec, RecordingResource)
+        assert rec.url == SIGNED_URL
+        assert rec.expires_in == 600
+
+
 @pytest.mark.asyncio
 async def test_async_recordings_retrieve_returns_signed_url():
     with respx.mock(assert_all_called=False) as respx_mock:

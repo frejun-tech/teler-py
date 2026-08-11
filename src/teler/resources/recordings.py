@@ -29,8 +29,18 @@ def _validate_recording_id(recording_id: str) -> None:
 
 
 def _to_recording(res, recording_id: str, expires_in: int) -> RecordingResource:
-    """Build a RecordingResource from a 302 response's Location header."""
+    """Build a RecordingResource from a 302 Location header or a JSON body.
+
+    Prefers the ``Location`` header (302 redirect); falls back to a JSON body
+    carrying ``url``/``expires_in`` (optionally wrapped in a ``data`` envelope).
+    """
     url = res.headers.get("location")
+    if not url and res.headers.get("content-type", "").startswith("application/json"):
+        body = res.json()
+        if isinstance(body, dict):
+            body = body.get("data", body)
+            url = body.get("url")
+            expires_in = body.get("expires_in", expires_in)
     if not url:
         raise exceptions.TelerException(
             msg="Recording response did not include a signed URL."
