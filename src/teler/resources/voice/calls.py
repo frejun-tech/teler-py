@@ -4,6 +4,7 @@ from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
     CursorPage,
+    validate_pagination,
 )
 from .types import CallResource, CallLegResource, CreateCallResource
 
@@ -42,6 +43,7 @@ def _build_list_params(
     cursor_after: Optional[str],
     cursor_before: Optional[str],
 ) -> Dict[str, Any]:
+    validate_pagination(limit, cursor_after, cursor_before)
     params: Dict[str, Any] = {
         "state": state,
         "from_number": from_number,

@@ -6,6 +6,7 @@ from teler.resources.base import (
     BaseResource,
     BaseResourceManager,
     CursorPage,
+    validate_pagination,
 )
 
 PATHS: Dict[str, str] = {
@@ -50,6 +51,7 @@ def _build_list_params(
     cursor_before: Optional[str],
 ) -> Dict[str, Any]:
     """Build the query params for listing secrets, dropping unset values."""
+    validate_pagination(limit, cursor_after, cursor_before)
     params: Dict[str, Any] = {
         "search": search,
         "limit": limit,

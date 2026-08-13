@@ -4,6 +4,7 @@ from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
     CursorPage,
+    validate_pagination,
 )
 from .types import VoiceAppResource, VirtualNumberResource, DeleteResult
 
@@ -25,6 +26,7 @@ def _build_list_params(
     cursor_after: Optional[str],
     cursor_before: Optional[str],
 ) -> Dict[str, Any]:
+    validate_pagination(limit, cursor_after, cursor_before)
     params: Dict[str, Any] = {
         "search": search,
         "status": status,
@@ -42,6 +44,8 @@ def _build_vn_params(
     cursor_after: Optional[str],
     cursor_before: Optional[str],
 ) -> Dict[str, Any]:
+    # This endpoint narrows the page size to 50, unlike the usual 100.
+    validate_pagination(limit, cursor_after, cursor_before, max_limit=50)
     params: Dict[str, Any] = {
         "search": search,
         "location": location,

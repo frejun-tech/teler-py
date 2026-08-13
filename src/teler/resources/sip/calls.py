@@ -4,6 +4,7 @@ from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
     CursorPage,
+    validate_pagination,
 )
 from .types import SipCallResource
 
@@ -24,6 +25,7 @@ def _build_list_params(
     cursor_before: Optional[str],
 ) -> Dict[str, Any]:
     """Build the query params for listing SIP calls, dropping unset values."""
+    validate_pagination(limit, cursor_after, cursor_before)
     params: Dict[str, Any] = {
         "trunk_id": trunk_id,
         "from_number": from_number,

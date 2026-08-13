@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, cast
 
-from teler.resources.base import (AsyncBaseResourceManager, BaseResource, BaseResourceManager, CursorPage)
+from teler.resources.base import (AsyncBaseResourceManager, BaseResource, BaseResourceManager, CursorPage, validate_pagination)
 
 PATHS: Dict[str, str] = {
     "list": "/events",
@@ -54,6 +54,7 @@ def _build_list_params(
     cursor_before: Optional[str],
 ) -> Dict[str, Any]:
     """Build the query params for listing events, dropping unset values."""
+    validate_pagination(limit, cursor_after, cursor_before)
     params: Dict[str, Any] = {
         "call_id": call_id,
         "type": type,
