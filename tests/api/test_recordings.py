@@ -11,7 +11,7 @@ SIGNED_URL = "https://storage.example.com/rec_123.mp3?sig=abc"
 
 def test_recordings_retrieve_returns_signed_url():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.get(f"{BASE}/recordings/").mock(
+        route = respx_mock.get(f"{BASE}/recordings").mock(
             return_value=httpx.Response(302, headers={"location": SIGNED_URL})
         )
         client = Client(api_key="test_api_key")
@@ -28,7 +28,7 @@ def test_recordings_retrieve_returns_signed_url():
 
 def test_recordings_retrieve_accepts_json_body():
     with respx.mock(assert_all_called=False) as respx_mock:
-        respx_mock.get(f"{BASE}/recordings/").mock(
+        respx_mock.get(f"{BASE}/recordings").mock(
             return_value=httpx.Response(
                 200, json={"url": SIGNED_URL, "expires_in": 600}
             )
@@ -45,7 +45,7 @@ def test_recordings_retrieve_accepts_json_body():
 @pytest.mark.asyncio
 async def test_async_recordings_retrieve_returns_signed_url():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.get(f"{BASE}/recordings/").mock(
+        route = respx_mock.get(f"{BASE}/recordings").mock(
             return_value=httpx.Response(302, headers={"location": SIGNED_URL})
         )
         client = AsyncClient(api_key="test_api_key")
@@ -54,6 +54,22 @@ async def test_async_recordings_retrieve_returns_signed_url():
 
         assert route.called
         assert isinstance(rec, RecordingResource)
+        assert rec.url == SIGNED_URL
+
+
+def test_recordings_request_path_has_no_trailing_slash():
+    """A trailing slash makes the API 307-redirect to itself, so the SDK would
+    return the API URL instead of the signed URL."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.get(f"{BASE}/recordings").mock(
+            return_value=httpx.Response(307, headers={"location": SIGNED_URL})
+        )
+        client = Client(api_key="test_api_key")
+
+        rec = client.recordings.retrieve("rec_123")
+
+        assert route.called
+        assert route.calls.last.request.url.path == "/api/v1/recordings"
         assert rec.url == SIGNED_URL
 
 

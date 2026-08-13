@@ -5,7 +5,7 @@ from teler import exceptions
 from teler.resources.base import (AsyncBaseResourceManager, BaseResource, BaseResourceManager)
 
 PATHS: Dict[str, str] = {
-    "retrieve": "/recordings/",
+    "retrieve": "/recordings",
 }
 
 
@@ -28,10 +28,11 @@ def _validate_recording_id(recording_id: str) -> None:
 
 
 def _to_recording(res, recording_id: str, expires_in: int) -> RecordingResource:
-    """Build a RecordingResource from a 302 Location header or a JSON body.
+    """Build a RecordingResource from a redirect Location header or a JSON body.
 
-    Prefers the ``Location`` header (302 redirect); falls back to a JSON body
-    carrying ``url``/``expires_in`` (optionally wrapped in a ``data`` envelope).
+    Prefers the ``Location`` header. The API documents this redirect as 302 but
+    emits 307, so the status code is deliberately not checked. Falls back to a
+    JSON body carrying ``url``/``expires_in`` (optionally in a ``data`` envelope).
     """
     url = res.headers.get("location")
     if not url and res.headers.get("content-type", "").startswith("application/json"):
