@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 from dataclasses import dataclass
 
 from teler.resources.base import BaseResource
+from teler.resources.virtual_numbers import VirtualNumberResource  # noqa: F401
 
 
 @dataclass
@@ -71,20 +72,6 @@ class VoiceAppResource(BaseResource):
     secret_name: Optional[str]
     webhook_api_version: Optional[str]
     account_id: Optional[str]
-
-    def __init__(self, data: Dict[str, Any]):
-        super().__init__(data)
-
-
-@dataclass
-class VirtualNumberResource(BaseResource):
-    id: str
-    account_id: Optional[str]
-    name: Optional[str]
-    number: Optional[str]
-    location: Optional[Dict[str, Any]]
-    voice_app: Optional[Dict[str, Any]]
-    sip_trunk: Optional[Dict[str, Any]]
 
     def __init__(self, data: Dict[str, Any]):
         super().__init__(data)
