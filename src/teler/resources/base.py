@@ -37,6 +37,30 @@ class CursorPage:
     has_more: bool = False
 
 
+def validate_pagination(
+    limit: Optional[int] = None,
+    cursor_after: Optional[str] = None,
+    cursor_before: Optional[str] = None,
+    max_limit: int = 100,
+) -> None:
+    """Validate cursor pagination arguments before issuing a request.
+
+    The API rejects a limit outside 1..max_limit and rejects both cursors being
+    sent together. Neither rule appears in the OpenAPI schema, so both are
+    checked here to fail fast instead of round-tripping to a 422.
+    """
+    if limit is not None and not 1 <= limit <= max_limit:
+        raise exceptions.BadParametersException(
+            param="limit",
+            msg=f"limit must be between 1 and {max_limit}.",
+        )
+    if cursor_after is not None and cursor_before is not None:
+        raise exceptions.BadParametersException(
+            param="cursor_after",
+            msg="cursor_after and cursor_before are mutually exclusive.",
+        )
+
+
 class BaseResourceManager(ABC):
     """Base class for all resource managers."""
 
@@ -121,7 +145,7 @@ class AsyncBaseResourceManager(ABC):
             raise exceptions.NotImplementedException(
                 msg="Method 'update()' is not implemented."
             )
-        res = self.client.request("PATCH", self.paths["update"].format(id))
+        res = await self.client.request("PATCH", self.paths["update"].format(id))
         return self.resource(res.json())
 
     async def delete(self, id) -> None:
