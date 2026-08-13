@@ -5,7 +5,7 @@ from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
 )
-from .types import TransferAction, TransferResource
+from .types import TransferResource
 
 PATHS: Dict[str, str] = {
     "transfer": "/voice/calls/{}/transfer",
@@ -75,9 +75,9 @@ class AsyncOperationResourceManager(AsyncBaseResourceManager):
         timeout: Optional[int] = None,
         record: Optional[bool] = None,
         ringback: Optional[str] = None,
-        dial_music: Optional[TransferAction] = None,
-        confirm_sound: Optional[TransferAction] = None,
-        on_failure: Optional[TransferAction] = None,
+        dial_music: Optional[Dict[str, Any]] = None,
+        confirm_sound: Optional[Dict[str, Any]] = None,
+        on_failure: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None,
     ) -> TransferResource:
         payload: Dict[str, Any] = {
