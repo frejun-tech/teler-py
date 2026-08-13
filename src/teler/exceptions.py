@@ -2,17 +2,35 @@ class TelerException(Exception):
     message = "An exception occurred."
     code = 500
 
-    def __init__(self, msg: str = ""):
-        super().__init__(msg or self.message)
+    def __init__(
+        self,
+        msg: str = "",
+        details=None,
+        code: int = None,
+    ):
+        self.message = msg or self.message
+        self.details = details
+        self.code = code if code is not None else self.code
+        super().__init__(self.message)
 
 
 class BadParametersException(TelerException):
     message = "Bad Parameter(s)."
     code = 400
 
-    def __init__(self, param: str = "", msg: str = ""):
+    def __init__(
+        self,
+        param: str = "",
+        msg: str = "",
+        details=None,
+        code: int = None,
+    ):
         self.param = param
-        super().__init__(msg or self.message)
+        super().__init__(
+            msg=msg or self.message,
+            details=details,
+            code=code,
+        )
 
 
 class UnauthorizedException(TelerException):
@@ -28,6 +46,26 @@ class ForbiddenException(TelerException):
 class NotFoundException(TelerException):
     message = "Not found."
     code = 404
+
+
+class ConflictException(TelerException):
+    message = "Resource Conflict."
+    code = 409
+
+
+class UnprocessableRequestException(TelerException):
+    message = "Unprocessable Request."
+    code = 422
+
+
+class RateLimitException(TelerException):
+    message = "Rate limit reached."
+    code = 429
+
+
+class InternalServerErrorException(TelerException):
+    message = "Internal Server Error."
+    code = 500
 
 
 class NotImplementedException(TelerException):

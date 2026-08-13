@@ -2,8 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 from teler import exceptions
-from teler.resources.base import (AsyncBaseResourceManager, BaseResource,
-                                  BaseResourceManager)
+from teler.resources.base import (AsyncBaseResourceManager, BaseResource, BaseResourceManager)
 
 PATHS: Dict[str, str] = {
     "retrieve": "/recordings/",

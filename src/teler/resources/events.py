@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, cast
 
-from teler.resources.base import (AsyncBaseResourceManager, BaseResource,
-                                  BaseResourceManager, CursorPage)
+from teler.resources.base import (AsyncBaseResourceManager, BaseResource, BaseResourceManager, CursorPage)
 
 PATHS: Dict[str, str] = {
     "list": "/events",

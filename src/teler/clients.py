@@ -4,11 +4,9 @@ from typing import Dict, Optional
 import httpx
 
 from teler import constants, exceptions
-from teler.resources.calls import AsyncCallResourceManager, CallResourceManager
-from teler.resources.events import (AsyncEventResourceManager,
-                                    EventResourceManager)
-from teler.resources.recordings import (AsyncRecordingResourceManager,
-                                        RecordingResourceManager)
+from teler.resources.events import (AsyncEventResourceManager, EventResourceManager)
+from teler.resources.recordings import (AsyncRecordingResourceManager, RecordingResourceManager)
+from teler.resources.voice.voice import AsyncVoiceResourceManager, VoiceResourceManager
 
 try:
     __version__ = metadata.version("teler")
@@ -26,6 +24,11 @@ STATUS_EXCEPTIONS = {
     401: exceptions.UnauthorizedException,
     403: exceptions.ForbiddenException,
     404: exceptions.NotFoundException,
+    409: exceptions.ConflictException,
+    422: exceptions.UnprocessableRequestException,
+    429: exceptions.RateLimitException,
+    500: exceptions.InternalServerErrorException,
+    501: exceptions.NotImplementedException,
 }
 
 
@@ -38,8 +41,34 @@ def _raise_for_status(res: httpx.Response) -> None:
     """
     if res.status_code < 400:
         return
-    exc = STATUS_EXCEPTIONS.get(res.status_code, exceptions.TelerException)
-    raise exc(msg=f"Request failed with status {res.status_code}.")
+
+    try:
+        body = res.json()
+    except (ValueError, TypeError):
+        body = {}
+
+    message = (
+        body.get("message")
+        if isinstance(body, dict)
+        else None
+    ) or f"Request failed with status {res.status_code}."
+
+    details = (
+        body.get("errors")
+        if isinstance(body, dict)
+        else None
+    )
+
+    exc = STATUS_EXCEPTIONS.get(
+        res.status_code,
+        exceptions.TelerException,
+    )
+
+    raise exc(
+        msg=message,
+        details=details,
+        code=res.status_code,
+    )
 
 
 class Client:
@@ -76,7 +105,7 @@ class Client:
             },
             **kwargs,
         )
-        self.calls = CallResourceManager(self)
+        self.voice = VoiceResourceManager(self)
         self.events = EventResourceManager(self)
         self.recordings = RecordingResourceManager(self)
 
@@ -141,7 +170,7 @@ class AsyncClient:
             },
             **kwargs,
         )
-        self.calls = AsyncCallResourceManager(self)
+        self.voice = AsyncVoiceResourceManager(self)
         self.events = AsyncEventResourceManager(self)
         self.recordings = AsyncRecordingResourceManager(self)
 
