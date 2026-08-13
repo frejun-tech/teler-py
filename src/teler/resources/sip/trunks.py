@@ -1,9 +1,11 @@
 from typing import Any, Dict, List, Optional, cast
 
+from teler import exceptions
 from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
     CursorPage,
+    validate_pagination,
 )
 from teler.resources.virtual_numbers import VirtualNumberResource
 from .types import DeleteResult, SipTrunkResource
@@ -17,6 +19,8 @@ PATHS: Dict[str, str] = {
     "virtual_numbers": "/sip/trunks/{}/virtual-numbers",
 }
 
+MAX_AUTH_ADDRESSES = 5
+
 
 def _build_list_params(
     search: Optional[str],
@@ -26,6 +30,7 @@ def _build_list_params(
     cursor_before: Optional[str],
 ) -> Dict[str, Any]:
     """Build the query params for listing SIP trunks, dropping unset values."""
+    validate_pagination(limit, cursor_after, cursor_before)
     params: Dict[str, Any] = {
         "search": search,
         "status": status,
@@ -43,6 +48,7 @@ def _build_vn_params(
     cursor_after: Optional[str],
     cursor_before: Optional[str],
 ) -> Dict[str, Any]:
+    validate_pagination(limit, cursor_after, cursor_before)
     params: Dict[str, Any] = {
         "search": search,
         "location": location,
@@ -51,6 +57,41 @@ def _build_vn_params(
         "cursor_before": cursor_before,
     }
     return {k: v for k, v in params.items() if v is not None}
+
+
+def _validate_auth_fields(
+    authentication_type: Optional[str],
+    auth_credential: Optional[Dict[str, str]],
+    auth_addresses: Optional[List[Dict[str, str]]],
+) -> None:
+    """Check the auth pairing the API enforces but the schema does not describe.
+
+    ``credential`` requires auth_credential and forbids auth_addresses;
+    ``IP`` requires between one and five auth_addresses.
+    """
+    if authentication_type == "credential":
+        if not auth_credential:
+            raise exceptions.BadParametersException(
+                param="auth_credential",
+                msg="auth_credential is required when authentication_type is 'credential'.",
+            )
+        if auth_addresses:
+            raise exceptions.BadParametersException(
+                param="auth_addresses",
+                msg="auth_addresses cannot be used when authentication_type is 'credential'.",
+            )
+    elif authentication_type == "IP":
+        if not auth_addresses:
+            raise exceptions.BadParametersException(
+                param="auth_addresses",
+                msg="auth_addresses is required when authentication_type is 'IP'.",
+            )
+
+    if auth_addresses is not None and len(auth_addresses) > MAX_AUTH_ADDRESSES:
+        raise exceptions.BadParametersException(
+            param="auth_addresses",
+            msg=f"A maximum of {MAX_AUTH_ADDRESSES} authentication addresses are allowed.",
+        )
 
 
 def _build_trunk_payload(
@@ -131,6 +172,7 @@ class SipTrunkResourceManager(BaseResourceManager):
         ``auth_addresses`` is a list of ``{"name": ..., "address": ...}``;
         ``inbound_route`` is ``{"name": ..., "sip_url": ..., "sip_user": ...}``.
         """
+        _validate_auth_fields(authentication_type, auth_credential, auth_addresses)
         payload = _build_trunk_payload(
             name, domain_name, authentication_type,
             channel_limit, recording, secure, None,
@@ -183,6 +225,7 @@ class SipTrunkResourceManager(BaseResourceManager):
         """
         Update a SIP trunk by its id.
         """
+        _validate_auth_fields(authentication_type, auth_credential, auth_addresses)
         payload = _build_trunk_payload(
             name, None, authentication_type,
             channel_limit, recording, secure, is_active,
@@ -247,6 +290,7 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         """
         Asynchronously create a SIP trunk.
         """
+        _validate_auth_fields(authentication_type, auth_credential, auth_addresses)
         payload = _build_trunk_payload(
             name, domain_name, authentication_type,
             channel_limit, recording, secure, None,
@@ -299,6 +343,7 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         """
         Asynchronously update a SIP trunk by its id.
         """
+        _validate_auth_fields(authentication_type, auth_credential, auth_addresses)
         payload = _build_trunk_payload(
             name, None, authentication_type,
             channel_limit, recording, secure, is_active,

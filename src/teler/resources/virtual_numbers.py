@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, cast
 
+from teler import exceptions
 from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResource,
     BaseResourceManager,
     CursorPage,
+    validate_pagination,
 )
 
 PATHS: Dict[str, str] = {
@@ -51,6 +53,7 @@ def _build_filter_params(
     cursor_before: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build the query params for virtual number endpoints, dropping unset values."""
+    validate_pagination(limit, cursor_after, cursor_before)
     params: Dict[str, Any] = {
         "search": search,
         "location": location,
@@ -61,6 +64,33 @@ def _build_filter_params(
         "cursor_before": cursor_before,
     }
     return {k: v for k, v in params.items() if v is not None}
+
+
+def _validate_selection(
+    vn_ids: Optional[List[str]], apply_to_all: Optional[bool]
+) -> None:
+    """The API requires either explicit vn_ids or apply_to_all."""
+    if not vn_ids and not apply_to_all:
+        raise exceptions.BadParametersException(
+            param="vn_ids",
+            msg="Provide vn_ids or set apply_to_all=True.",
+        )
+
+
+def _validate_assign_target(
+    voice_app_id: Optional[str], sip_trunk_id: Optional[str]
+) -> None:
+    """A virtual number is assigned to exactly one of a voice app or SIP trunk."""
+    if not voice_app_id and not sip_trunk_id:
+        raise exceptions.BadParametersException(
+            param="voice_app_id",
+            msg="Provide either voice_app_id or sip_trunk_id.",
+        )
+    if voice_app_id and sip_trunk_id:
+        raise exceptions.BadParametersException(
+            param="voice_app_id",
+            msg="A virtual number cannot be assigned to both a voice app and a SIP trunk.",
+        )
 
 
 def _build_assign_payload(
@@ -138,6 +168,8 @@ class VirtualNumberResourceManager(BaseResourceManager):
         filter query params (``search``, ``location``, ``voice_app``,
         ``sip_trunk``) to assign every matching number.
         """
+        _validate_selection(vn_ids, apply_to_all)
+        _validate_assign_target(voice_app_id, sip_trunk_id)
         params = _build_filter_params(search, location, voice_app, sip_trunk)
         payload = _build_assign_payload(
             vn_ids, apply_to_all, voice_app_id, sip_trunk_id
@@ -162,6 +194,7 @@ class VirtualNumberResourceManager(BaseResourceManager):
         Pass explicit ``vn_ids``, or ``apply_to_all=True`` combined with the
         filter query params to unassign every matching number.
         """
+        _validate_selection(vn_ids, apply_to_all)
         params = _build_filter_params(search, location, voice_app, sip_trunk)
         payload = _build_assign_payload(vn_ids, apply_to_all, None, None)
         res = self.client.request(
@@ -224,6 +257,8 @@ class AsyncVirtualNumberResourceManager(AsyncBaseResourceManager):
         """
         Asynchronously assign virtual numbers to a voice app or SIP trunk.
         """
+        _validate_selection(vn_ids, apply_to_all)
+        _validate_assign_target(voice_app_id, sip_trunk_id)
         params = _build_filter_params(search, location, voice_app, sip_trunk)
         payload = _build_assign_payload(
             vn_ids, apply_to_all, voice_app_id, sip_trunk_id
@@ -245,6 +280,7 @@ class AsyncVirtualNumberResourceManager(AsyncBaseResourceManager):
         """
         Asynchronously unassign virtual numbers from their voice app or SIP trunk.
         """
+        _validate_selection(vn_ids, apply_to_all)
         params = _build_filter_params(search, location, voice_app, sip_trunk)
         payload = _build_assign_payload(vn_ids, apply_to_all, None, None)
         res = await self.client.request(
