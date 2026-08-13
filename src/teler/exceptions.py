@@ -53,6 +53,11 @@ class ConflictException(TelerException):
     code = 409
 
 
+class GoneException(TelerException):
+    message = "Resource is no longer available."
+    code = 410
+
+
 class UnprocessableRequestException(TelerException):
     message = "Unprocessable Request."
     code = 422

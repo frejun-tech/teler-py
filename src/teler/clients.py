@@ -28,6 +28,7 @@ STATUS_EXCEPTIONS = {
     403: exceptions.ForbiddenException,
     404: exceptions.NotFoundException,
     409: exceptions.ConflictException,
+    410: exceptions.GoneException,
     422: exceptions.UnprocessableRequestException,
     429: exceptions.RateLimitException,
     500: exceptions.InternalServerErrorException,

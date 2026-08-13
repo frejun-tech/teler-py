@@ -14,6 +14,10 @@ BASE = "https://api.frejun.ai/api/v1"
         (401, exceptions.UnauthorizedException),
         (403, exceptions.ForbiddenException),
         (404, exceptions.NotFoundException),
+        (409, exceptions.ConflictException),
+        (410, exceptions.GoneException),
+        (422, exceptions.UnprocessableRequestException),
+        (429, exceptions.RateLimitException),
         (500, exceptions.TelerException),
     ],
 )
@@ -33,6 +37,7 @@ def test_request_maps_status_to_exception(status, exc):
     "status,exc",
     [
         (404, exceptions.NotFoundException),
+        (410, exceptions.GoneException),
         (500, exceptions.TelerException),
     ],
 )
