@@ -6,6 +6,7 @@ import httpx
 from teler import constants, exceptions
 from teler.resources.events import (AsyncEventResourceManager, EventResourceManager)
 from teler.resources.recordings import (AsyncRecordingResourceManager, RecordingResourceManager)
+from teler.resources.secrets import (AsyncSecretResourceManager, SecretResourceManager)
 from teler.resources.sip.sip import AsyncSipResourceManager, SipResourceManager
 from teler.resources.virtual_numbers import (AsyncVirtualNumberResourceManager, VirtualNumberResourceManager)
 from teler.resources.voice.voice import AsyncVoiceResourceManager, VoiceResourceManager
@@ -112,6 +113,7 @@ class Client:
         self.recordings = RecordingResourceManager(self)
         self.virtual_numbers = VirtualNumberResourceManager(self)
         self.sip = SipResourceManager(self)
+        self.secrets = SecretResourceManager(self)
 
     def request(self, *args, **kwargs) -> httpx.Response:
         """
@@ -179,6 +181,7 @@ class AsyncClient:
         self.recordings = AsyncRecordingResourceManager(self)
         self.virtual_numbers = AsyncVirtualNumberResourceManager(self)
         self.sip = AsyncSipResourceManager(self)
+        self.secrets = AsyncSecretResourceManager(self)
 
     async def request(self, *args, **kwargs) -> httpx.Response:
         """
