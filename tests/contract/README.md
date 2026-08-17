@@ -25,21 +25,53 @@ SDK importable. The backend's own virtualenv has a *published* `teler` release
 installed, which would shadow the working tree, so put `src` on `PYTHONPATH`
 explicitly:
 
-```bash
-# one-time: an interpreter with the backend's dependencies
-python3 -m venv /tmp/teler-itest
-/tmp/teler-itest/bin/pip install -r /home/sahil/Work/teler-backend/requirements.txt
-/tmp/teler-itest/bin/pip install pytest pytest-asyncio uvicorn
+The quickest route is to add the two test packages to the backend's existing
+virtualenv, which already carries FastAPI and uvicorn:
 
-# run
+```bash
+/home/sahil/Work/teler-backend/.venv/bin/pip install pytest pytest-asyncio
+
 TELER_BACKEND_PATH=/home/sahil/Work/teler-backend \
-PYTHONPATH=/path/to/teler-sdk-py/src \
-/tmp/teler-itest/bin/python -m pytest tests/contract -q
+PYTHONPATH=/home/sahil/Work/teler-sdk-py/src \
+/home/sahil/Work/teler-backend/.venv/bin/python -m pytest tests/contract -q
 ```
 
-Without `TELER_BACKEND_PATH`, or when the backend cannot be imported, the whole
-directory **skips** rather than fails, so `pytest tests/` stays green in CI and
-in the plain SDK virtualenv.
+To keep the backend's virtualenv untouched, build a dedicated one instead:
+
+```bash
+python3 -m venv ~/.venvs/teler-contract
+~/.venvs/teler-contract/bin/pip install \
+  -r /home/sahil/Work/teler-backend/requirements.txt
+~/.venvs/teler-contract/bin/pip install pytest pytest-asyncio uvicorn
+
+TELER_BACKEND_PATH=/home/sahil/Work/teler-backend \
+PYTHONPATH=/home/sahil/Work/teler-sdk-py/src \
+~/.venvs/teler-contract/bin/python -m pytest tests/contract -q
+```
+
+`PYTHONPATH` is not optional. Both interpreters can see a *published* `teler`
+release from PyPI, which would otherwise shadow the working tree and test the
+wrong code. Verify with:
+
+```bash
+PYTHONPATH=.../src <interpreter> -c "import teler; print(teler.__file__)"
+```
+
+It must print a path under `src/teler/`, not one under `site-packages`.
+
+`pytest -m contract` selects the same set from anywhere in the suite, and
+`pytest -m "not contract"` runs only the hermetic tests.
+
+With `TELER_BACKEND_PATH` unset or pointing nowhere, the whole directory
+**skips**, so `pytest tests/` stays green in CI and in the plain SDK virtualenv.
+
+Setting the variable in an interpreter that lacks the backend's dependencies is a
+different case: those 83 tests **error** rather than skip, because the fixture
+only guards the backend import and FastAPI is first needed a step later, when the
+app is built. This is deliberate — an error is a louder signal that the
+environment is set up wrong than a silent skip would be. If you export the
+variable in your shell profile, expect a plain `pytest` in the SDK virtualenv to
+report those errors, and use `pytest -m "not contract"` for a clean run.
 
 Every test here depends on the `live_api` fixture, which is what makes the skip
 total. Anything that can run without the backend belongs in `tests/unit`
