@@ -41,10 +41,17 @@ Without `TELER_BACKEND_PATH`, or when the backend cannot be imported, the whole
 directory **skips** rather than fails, so `pytest tests/` stays green in CI and
 in the plain SDK virtualenv.
 
+Every test here depends on the `live_api` fixture, which is what makes the skip
+total. Anything that can run without the backend belongs in `tests/unit`
+instead — the path well-formedness checks in `tests/unit/test_resource_paths.py`
+are the hermetic counterpart to `test_live_routing.py` and share the same
+`sdk_path` parametrization from `tests/conftest.py`.
+
 ## Coverage
 
 | File | Covers |
 |---|---|
+| `test_live_routing.py` | every `PATHS` entry resolves on the real router, no path redirects, all appear in the served schema |
 | `test_live_recordings.py` | signed-URL redirect, `expires_in`, and the trailing-slash regression at the HTTP layer |
 | `test_live_events.py` | list/retrieve/redeliver, the `type` alias on the wire, 410 → `GoneException`, 409 → `ConflictException` |
 | `test_live_secrets.py` | full CRUD, rotate flag, prefixed-id parsing |
