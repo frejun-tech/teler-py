@@ -1,17 +1,24 @@
 import os
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
 
 BACKEND_PATH = os.environ.get("TELER_BACKEND_PATH")
 
-pytestmark = pytest.mark.contract
+CONTRACT_DIR = Path(__file__).parent
 
 
-def pytest_configure(config):
-    config.addinivalue_line(
-        "markers", "contract: drives the real API over a real socket"
-    )
+def pytest_collection_modifyitems(config, items):
+    """Mark everything in this directory `contract`, so `-m` selection works.
+
+    A module-level `pytestmark` does nothing in a conftest — pytest only honours
+    it in test modules and classes — so the mark has to be applied here. The
+    marker itself is registered in pyproject.toml.
+    """
+    for item in items:
+        if CONTRACT_DIR in Path(str(item.fspath)).parents:
+            item.add_marker(pytest.mark.contract)
 
 
 @pytest.fixture(scope="session")
