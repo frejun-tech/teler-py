@@ -1,4 +1,4 @@
-# Live integration tests
+# Live contract tests
 
 These drive the **real SDK** against the **real Teler API**. The backend's actual
 FastAPI routers are mounted and served over a real localhost socket, so every
@@ -34,7 +34,7 @@ python3 -m venv /tmp/teler-itest
 # run
 TELER_BACKEND_PATH=/home/sahil/Work/teler-backend \
 PYTHONPATH=/path/to/teler-sdk-py/src \
-/tmp/teler-itest/bin/python -m pytest tests/integration -q
+/tmp/teler-itest/bin/python -m pytest tests/contract -q
 ```
 
 Without `TELER_BACKEND_PATH`, or when the backend cannot be imported, the whole

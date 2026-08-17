@@ -5,12 +5,12 @@ import pytest_asyncio
 
 BACKEND_PATH = os.environ.get("TELER_BACKEND_PATH")
 
-pytestmark = pytest.mark.integration
+pytestmark = pytest.mark.contract
 
 
 def pytest_configure(config):
     config.addinivalue_line(
-        "markers", "integration: drives the real API over a real socket"
+        "markers", "contract: drives the real API over a real socket"
     )
 
 
@@ -18,7 +18,7 @@ def pytest_configure(config):
 def live_api():
     """Serve the backend's real routers on localhost for the whole session."""
     if not BACKEND_PATH:
-        pytest.skip("set TELER_BACKEND_PATH to run integration tests")
+        pytest.skip("set TELER_BACKEND_PATH to run contract tests")
     if not os.path.isdir(BACKEND_PATH):
         pytest.skip(f"TELER_BACKEND_PATH does not exist: {BACKEND_PATH}")
 
