@@ -15,7 +15,7 @@ class CallFlow:
         """
         return {
             "action": "dial",
-            "from_numebr": from_number,
+            "from_number": from_number,
             "to_number": to_number,
             "status_callback_url": status_callback_url,
             "record": record,
