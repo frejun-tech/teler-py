@@ -26,6 +26,9 @@ test = [
 [tool.setuptools.dynamic]
 version = { attr = "teler.__version__" }
 
+[tool.setuptools.package-data]
+teler = ["py.typed"]
+
 [tool.pytest.ini_options]
 markers = [
   "contract: drives the real API over a real socket; needs TELER_BACKEND_PATH",
