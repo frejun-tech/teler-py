@@ -3,6 +3,8 @@
 Each test asserts the SDK raises before any HTTP request is issued, so the rule
 is enforced client-side rather than round-tripping to a server 422.
 """
+import json
+
 import httpx
 import pytest
 import respx
@@ -133,6 +135,74 @@ def test_trunk_accepts_five_auth_addresses():
         )
 
         assert route.called
+
+
+def test_trunk_ip_accepts_an_ip_acl_id_instead_of_addresses():
+    """An ACL is the other permitted auth source for ``IP``."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/sip/trunks").mock(
+            return_value=httpx.Response(201, json={"id": "st_1"})
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="IP",
+            ip_acl_id="acl_123",
+        )
+
+        assert route.called
+        body = json.loads(route.calls.last.request.content)
+        assert body["ip_acl_id"] == "acl_123"
+        assert "auth_addresses" not in body
+
+
+def test_trunk_ip_with_both_auth_sources_raises():
+    """The API takes exactly one of the two; both is rejected."""
+    client = Client(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException) as exc:
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="IP",
+            auth_addresses=[ADDRESS], ip_acl_id="acl_123",
+        )
+
+    assert exc.value.param == "ip_acl_id"
+    assert "not both" in str(exc.value)
+
+
+def test_trunk_credential_with_ip_acl_id_raises():
+    client = Client(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException) as exc:
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com",
+            authentication_type="credential",
+            auth_credential=CREDENTIAL, ip_acl_id="acl_123",
+        )
+
+    assert exc.value.param == "ip_acl_id"
+
+
+def test_trunk_update_can_switch_to_an_ip_acl():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.patch(f"{BASE}/sip/trunks/st_1").mock(
+            return_value=httpx.Response(200, json={"id": "st_1"})
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.update(
+            "st_1", authentication_type="IP", ip_acl_id="acl_123"
+        )
+
+        assert json.loads(route.calls.last.request.content)["ip_acl_id"] == "acl_123"
+
+
+@pytest.mark.asyncio
+async def test_async_trunk_ip_with_both_auth_sources_raises():
+    client = AsyncClient(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException):
+        await client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="IP",
+            auth_addresses=[ADDRESS], ip_acl_id="acl_123",
+        )
 
 
 def test_trunk_update_validates_auth_pairing():

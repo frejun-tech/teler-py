@@ -72,6 +72,7 @@ class VoiceAppResource(BaseResource):
     secret_name: Optional[str]
     webhook_api_version: Optional[str]
     account_id: Optional[str]
+    code: Optional[str]
 
     def __init__(self, data: Dict[str, Any]):
         super().__init__(data)

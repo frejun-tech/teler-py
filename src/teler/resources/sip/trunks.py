@@ -63,11 +63,14 @@ def _validate_auth_fields(
     authentication_type: Optional[str],
     auth_credential: Optional[Dict[str, str]],
     auth_addresses: Optional[List[Dict[str, str]]],
+    ip_acl_id: Optional[str] = None,
 ) -> None:
     """Check the auth pairing the API enforces but the schema does not describe.
 
-    ``credential`` requires auth_credential and forbids auth_addresses;
-    ``IP`` requires between one and five auth_addresses.
+    ``credential`` requires auth_credential and forbids both IP auth sources.
+    ``IP`` takes exactly one of ``auth_addresses`` (up to five inline entries) or
+    ``ip_acl_id`` (a shared, reusable list) — supplying both or neither is
+    rejected.
     """
     if authentication_type == "credential":
         if not auth_credential:
@@ -80,11 +83,24 @@ def _validate_auth_fields(
                 param="auth_addresses",
                 msg="auth_addresses cannot be used when authentication_type is 'credential'.",
             )
+        if ip_acl_id is not None:
+            raise exceptions.BadParametersException(
+                param="ip_acl_id",
+                msg="ip_acl_id cannot be used when authentication_type is 'credential'.",
+            )
     elif authentication_type == "IP":
-        if not auth_addresses:
+        if auth_addresses and ip_acl_id is not None:
+            raise exceptions.BadParametersException(
+                param="ip_acl_id",
+                msg="Provide either auth_addresses or ip_acl_id, not both.",
+            )
+        if not auth_addresses and ip_acl_id is None:
             raise exceptions.BadParametersException(
                 param="auth_addresses",
-                msg="auth_addresses is required when authentication_type is 'IP'.",
+                msg=(
+                    "auth_addresses or ip_acl_id is required when "
+                    "authentication_type is 'IP'."
+                ),
             )
 
     if auth_addresses is not None and len(auth_addresses) > MAX_AUTH_ADDRESSES:
@@ -108,6 +124,7 @@ def _build_trunk_payload(
     inbound_route: Optional[Dict[str, Any]],
     secret_id: Optional[str],
     webhook_api_version: Optional[str],
+    ip_acl_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build a SIP trunk create/update payload, dropping unset values."""
     payload: Dict[str, Any] = {
@@ -121,6 +138,7 @@ def _build_trunk_payload(
         "webhook_url": webhook_url,
         "auth_credential": auth_credential,
         "auth_addresses": auth_addresses,
+        "ip_acl_id": ip_acl_id,
         "inbound_route": inbound_route,
         "secret_id": secret_id,
         "webhook_api_version": webhook_api_version,
@@ -160,6 +178,7 @@ class SipTrunkResourceManager(BaseResourceManager):
         webhook_url: Optional[str] = None,
         auth_credential: Optional[Dict[str, str]] = None,
         auth_addresses: Optional[List[Dict[str, str]]] = None,
+        ip_acl_id: Optional[str] = None,
         inbound_route: Optional[Dict[str, Any]] = None,
         secret_id: Optional[str] = None,
         webhook_api_version: Optional[str] = None,
@@ -171,13 +190,19 @@ class SipTrunkResourceManager(BaseResourceManager):
         ``auth_credential`` is ``{"username": ..., "password": ...}``;
         ``auth_addresses`` is a list of ``{"name": ..., "address": ...}``;
         ``inbound_route`` is ``{"name": ..., "sip_url": ..., "sip_user": ...}``.
+
+        With ``"IP"``, authorise against exactly one of ``auth_addresses``
+        (inline, up to five) or ``ip_acl_id`` (a reusable list from
+        ``client.sip.ip_acls``).
         """
-        _validate_auth_fields(authentication_type, auth_credential, auth_addresses)
+        _validate_auth_fields(
+            authentication_type, auth_credential, auth_addresses, ip_acl_id
+        )
         payload = _build_trunk_payload(
             name, domain_name, authentication_type,
             channel_limit, recording, secure, None,
             webhook_url, auth_credential, auth_addresses,
-            inbound_route, secret_id, webhook_api_version,
+            inbound_route, secret_id, webhook_api_version, ip_acl_id,
         )
         res = self.client.request("POST", self.paths["create"], json=payload)
         return cast(SipTrunkResource, self.resource(_unwrap(res.json())))
@@ -219,18 +244,21 @@ class SipTrunkResourceManager(BaseResourceManager):
         authentication_type: Optional[str] = None,
         auth_credential: Optional[Dict[str, str]] = None,
         auth_addresses: Optional[List[Dict[str, str]]] = None,
+        ip_acl_id: Optional[str] = None,
         inbound_route: Optional[Dict[str, Any]] = None,
         secret_id: Optional[str] = None,
     ) -> SipTrunkResource:
         """
         Update a SIP trunk by its id.
         """
-        _validate_auth_fields(authentication_type, auth_credential, auth_addresses)
+        _validate_auth_fields(
+            authentication_type, auth_credential, auth_addresses, ip_acl_id
+        )
         payload = _build_trunk_payload(
             name, None, authentication_type,
             channel_limit, recording, secure, is_active,
             webhook_url, auth_credential, auth_addresses,
-            inbound_route, secret_id, webhook_api_version,
+            inbound_route, secret_id, webhook_api_version, ip_acl_id,
         )
         res = self.client.request(
             "PATCH", self.paths["update"].format(trunk_id), json=payload
@@ -283,6 +311,7 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         webhook_url: Optional[str] = None,
         auth_credential: Optional[Dict[str, str]] = None,
         auth_addresses: Optional[List[Dict[str, str]]] = None,
+        ip_acl_id: Optional[str] = None,
         inbound_route: Optional[Dict[str, Any]] = None,
         secret_id: Optional[str] = None,
         webhook_api_version: Optional[str] = None,
@@ -290,12 +319,14 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         """
         Asynchronously create a SIP trunk.
         """
-        _validate_auth_fields(authentication_type, auth_credential, auth_addresses)
+        _validate_auth_fields(
+            authentication_type, auth_credential, auth_addresses, ip_acl_id
+        )
         payload = _build_trunk_payload(
             name, domain_name, authentication_type,
             channel_limit, recording, secure, None,
             webhook_url, auth_credential, auth_addresses,
-            inbound_route, secret_id, webhook_api_version,
+            inbound_route, secret_id, webhook_api_version, ip_acl_id,
         )
         res = await self.client.request("POST", self.paths["create"], json=payload)
         return cast(SipTrunkResource, self.resource(_unwrap(res.json())))
@@ -337,18 +368,21 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         authentication_type: Optional[str] = None,
         auth_credential: Optional[Dict[str, str]] = None,
         auth_addresses: Optional[List[Dict[str, str]]] = None,
+        ip_acl_id: Optional[str] = None,
         inbound_route: Optional[Dict[str, Any]] = None,
         secret_id: Optional[str] = None,
     ) -> SipTrunkResource:
         """
         Asynchronously update a SIP trunk by its id.
         """
-        _validate_auth_fields(authentication_type, auth_credential, auth_addresses)
+        _validate_auth_fields(
+            authentication_type, auth_credential, auth_addresses, ip_acl_id
+        )
         payload = _build_trunk_payload(
             name, None, authentication_type,
             channel_limit, recording, secure, is_active,
             webhook_url, auth_credential, auth_addresses,
-            inbound_route, secret_id, webhook_api_version,
+            inbound_route, secret_id, webhook_api_version, ip_acl_id,
         )
         res = await self.client.request(
             "PATCH", self.paths["update"].format(trunk_id), json=payload

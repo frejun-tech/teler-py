@@ -40,6 +40,8 @@ class SipTrunkResource(BaseResource):
     is_active: Optional[bool]
     auth_ip_addresses: Optional[list]
     auth_credential_usernames: Optional[list]
+    ip_acl_id: Optional[str]
+    ip_acl_name: Optional[str]
     sip_route: Optional[Dict[str, Any]]
     webhook_url: Optional[str]
     webhook_api_version: Optional[str]
@@ -47,6 +49,7 @@ class SipTrunkResource(BaseResource):
     updated_at: Optional[str]
     secret_id: Optional[str]
     secret_name: Optional[str]
+    code: Optional[str]
 
     def __init__(self, data: Dict[str, Any]):
         super().__init__(data)
