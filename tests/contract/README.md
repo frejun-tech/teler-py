@@ -21,40 +21,41 @@ dataclasses fail to declare (`BaseResource` raises `TypeError` on unknown keys).
 ## Running them
 
 They need one interpreter that has **both** the backend's dependencies and this
-SDK importable. The backend's own virtualenv has a *published* `teler` release
-installed, which would shadow the working tree, so put `src` on `PYTHONPATH`
-explicitly:
+SDK importable. Point these at your own checkouts:
+
+```bash
+export BACKEND=/path/to/teler-backend
+export SDK=/path/to/teler-sdk-py
+```
 
 The quickest route is to add the two test packages to the backend's existing
 virtualenv, which already carries FastAPI and uvicorn:
 
 ```bash
-/home/sahil/Work/teler-backend/.venv/bin/pip install pytest pytest-asyncio
+$BACKEND/.venv/bin/pip install pytest pytest-asyncio
 
-TELER_BACKEND_PATH=/home/sahil/Work/teler-backend \
-PYTHONPATH=/home/sahil/Work/teler-sdk-py/src \
-/home/sahil/Work/teler-backend/.venv/bin/python -m pytest tests/contract -q
+TELER_BACKEND_PATH=$BACKEND PYTHONPATH=$SDK/src \
+  $BACKEND/.venv/bin/python -m pytest tests/contract -q
 ```
 
 To keep the backend's virtualenv untouched, build a dedicated one instead:
 
 ```bash
 python3 -m venv ~/.venvs/teler-contract
-~/.venvs/teler-contract/bin/pip install \
-  -r /home/sahil/Work/teler-backend/requirements.txt
+~/.venvs/teler-contract/bin/pip install -r $BACKEND/requirements.txt
 ~/.venvs/teler-contract/bin/pip install pytest pytest-asyncio uvicorn
 
-TELER_BACKEND_PATH=/home/sahil/Work/teler-backend \
-PYTHONPATH=/home/sahil/Work/teler-sdk-py/src \
-~/.venvs/teler-contract/bin/python -m pytest tests/contract -q
+TELER_BACKEND_PATH=$BACKEND PYTHONPATH=$SDK/src \
+  ~/.venvs/teler-contract/bin/python -m pytest tests/contract -q
 ```
 
-`PYTHONPATH` is not optional. Both interpreters can see a *published* `teler`
-release from PyPI, which would otherwise shadow the working tree and test the
-wrong code. Verify with:
+`PYTHONPATH` is not optional. The backend's `requirements.txt` pins `teler`, so
+both interpreters can see a *published* release that would otherwise shadow the
+working tree and test the wrong code — and a later `pip install -r` silently
+reinstates it. Verify with:
 
 ```bash
-PYTHONPATH=.../src <interpreter> -c "import teler; print(teler.__file__)"
+PYTHONPATH=$SDK/src <interpreter> -c "import teler; print(teler.__file__)"
 ```
 
 It must print a path under `src/teler/`, not one under `site-packages`.
