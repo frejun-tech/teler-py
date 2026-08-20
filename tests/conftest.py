@@ -15,6 +15,7 @@ RESOURCE_MODULES = [
     "teler.resources.secrets",
     "teler.resources.virtual_numbers",
     "teler.resources.sip.calls",
+    "teler.resources.sip.ip_acls",
     "teler.resources.sip.trunks",
     "teler.resources.voice.calls",
     "teler.resources.voice.apps",

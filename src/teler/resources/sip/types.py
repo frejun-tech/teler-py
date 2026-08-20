@@ -53,6 +53,27 @@ class SipTrunkResource(BaseResource):
 
 
 @dataclass
+class IpAclResource(BaseResource):
+    """Represents a SIP IP access control list returned by the Teler API.
+
+    The list and detail endpoints return different shapes, so this declares the
+    union of both. ``addresses`` and ``updated_at`` are populated by create,
+    retrieve and update; ``address_count`` only by list. Whichever the response
+    omits reads back as ``None``.
+    """
+    id: str
+    name: Optional[str]
+    addresses: Optional[list]
+    address_count: Optional[int]
+    trunk_count: Optional[int]
+    created_at: Optional[str]
+    updated_at: Optional[str]
+
+    def __init__(self, data: Dict[str, Any]):
+        super().__init__(data)
+
+
+@dataclass
 class DeleteResult(BaseResource):
     """Result of a SIP trunk delete request."""
     success: bool
