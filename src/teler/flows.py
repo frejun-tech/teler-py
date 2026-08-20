@@ -36,8 +36,8 @@ class CallFlow:
         }
 
     @staticmethod
-    def play(file_url: str) -> Dict[str, Any]:
+    def play(media_url: str) -> Dict[str, Any]:
         """
         Build and return play action flow.
         """
-        return {"action": "play", "file_url": file_url}
+        return {"action": "play", "media_url": media_url}
