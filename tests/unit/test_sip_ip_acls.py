@@ -457,6 +457,41 @@ def test_update_rejects_an_empty_address_list():
             client.sip.ip_acls.update("acl_123", addresses=[])
 
 
+def test_create_rejects_an_explicit_none_name():
+    """Required positionally, but nothing stops a caller passing None."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        client = _unreachable_client(respx_mock)
+
+        with pytest.raises(exceptions.BadParametersException) as exc:
+            client.sip.ip_acls.create(name=None, addresses=ADDRESSES)
+
+        assert exc.value.param == "name"
+
+
+def test_create_rejects_an_explicit_none_address_list():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        client = _unreachable_client(respx_mock)
+
+        with pytest.raises(exceptions.BadParametersException) as exc:
+            client.sip.ip_acls.create(name="acl", addresses=None)
+
+        assert exc.value.param == "addresses"
+
+
+def test_a_data_wrapped_response_is_unwrapped():
+    """Detail responses may arrive inside a ``{"data": {...}}`` envelope."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        respx_mock.get(f"{BASE}/sip/ip-acls/acl_123").mock(
+            return_value=httpx.Response(200, json={"data": ACL_JSON})
+        )
+        client = Client(api_key="test_api_key")
+
+        acl = client.sip.ip_acls.retrieve("acl_123")
+
+        assert acl.id == "acl_01JQ8Z9K7M3N2P4R5S6T7V8WST"
+        assert acl.trunk_count == 2
+
+
 @pytest.mark.parametrize("limit", [0, 101])
 def test_list_rejects_out_of_range_limits(limit):
     with respx.mock(assert_all_called=False) as respx_mock:
