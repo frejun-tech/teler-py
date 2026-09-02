@@ -39,6 +39,19 @@ class OperationResourceManager(BaseResourceManager):
         on_failure: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None,
     ) -> TransferResource:
+        """
+        Transfer a call to a new destination.
+
+        ``target`` is ``{"kind": ..., "number": ..., "uri": ..., "leg_id": ...,
+        "custom_headers": {...}}``, where ``kind`` is ``"pstn"`` (needs
+        ``number``), ``"sip"`` (needs ``uri``) or ``"leg"``. ``dial_music``,
+        ``confirm_sound`` and ``on_failure`` are each ``{"action": ...,
+        "media_url": ..., "text": ..., "voice": ..., "language": ...,
+        "reason": ..., "loop": ...}``.
+
+        All nested objects are plain dicts — they are serialized straight to
+        JSON, so a dataclass would raise inside httpx.
+        """
         payload: Dict[str, Any] = {
             "target": target,
             "mode": mode,
@@ -80,6 +93,19 @@ class AsyncOperationResourceManager(AsyncBaseResourceManager):
         on_failure: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None,
     ) -> TransferResource:
+        """
+        Asynchronously transfer a call to a new destination.
+
+        ``target`` is ``{"kind": ..., "number": ..., "uri": ..., "leg_id": ...,
+        "custom_headers": {...}}``, where ``kind`` is ``"pstn"`` (needs
+        ``number``), ``"sip"`` (needs ``uri``) or ``"leg"``. ``dial_music``,
+        ``confirm_sound`` and ``on_failure`` are each ``{"action": ...,
+        "media_url": ..., "text": ..., "voice": ..., "language": ...,
+        "reason": ..., "loop": ...}``.
+
+        All nested objects are plain dicts — they are serialized straight to
+        JSON, so a dataclass would raise inside httpx.
+        """
         payload: Dict[str, Any] = {
             "target": target,
             "mode": mode,
