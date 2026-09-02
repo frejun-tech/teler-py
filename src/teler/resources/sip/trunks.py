@@ -117,6 +117,7 @@ def _build_trunk_payload(
     channel_limit: Optional[int],
     recording: Optional[bool],
     secure: Optional[bool],
+    transport: Optional[str],
     is_active: Optional[bool],
     webhook_url: Optional[str],
     auth_credential: Optional[Dict[str, str]],
@@ -134,6 +135,7 @@ def _build_trunk_payload(
         "channel_limit": channel_limit,
         "recording": recording,
         "secure": secure,
+        "transport": transport,
         "is_active": is_active,
         "webhook_url": webhook_url,
         "auth_credential": auth_credential,
@@ -175,6 +177,7 @@ class SipTrunkResourceManager(BaseResourceManager):
         channel_limit: Optional[int] = None,
         recording: Optional[bool] = None,
         secure: Optional[bool] = None,
+        transport: Optional[str] = None,
         webhook_url: Optional[str] = None,
         auth_credential: Optional[Dict[str, str]] = None,
         auth_addresses: Optional[List[Dict[str, str]]] = None,
@@ -194,13 +197,16 @@ class SipTrunkResourceManager(BaseResourceManager):
         With ``"IP"``, authorise against exactly one of ``auth_addresses``
         (inline, up to five) or ``ip_acl_id`` (a reusable list from
         ``client.sip.ip_acls``).
+
+        ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``; when omitted the API
+        derives it from ``secure`` (``True`` → ``"tls"``, else ``"tcp"``).
         """
         _validate_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
         payload = _build_trunk_payload(
             name, domain_name, authentication_type,
-            channel_limit, recording, secure, None,
+            channel_limit, recording, secure, transport, None,
             webhook_url, auth_credential, auth_addresses,
             inbound_route, secret_id, webhook_api_version, ip_acl_id,
         )
@@ -238,6 +244,7 @@ class SipTrunkResourceManager(BaseResourceManager):
         channel_limit: Optional[int] = None,
         recording: Optional[bool] = None,
         secure: Optional[bool] = None,
+        transport: Optional[str] = None,
         is_active: Optional[bool] = None,
         webhook_url: Optional[str] = None,
         webhook_api_version: Optional[str] = None,
@@ -256,7 +263,7 @@ class SipTrunkResourceManager(BaseResourceManager):
         )
         payload = _build_trunk_payload(
             name, None, authentication_type,
-            channel_limit, recording, secure, is_active,
+            channel_limit, recording, secure, transport, is_active,
             webhook_url, auth_credential, auth_addresses,
             inbound_route, secret_id, webhook_api_version, ip_acl_id,
         )
@@ -308,6 +315,7 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         channel_limit: Optional[int] = None,
         recording: Optional[bool] = None,
         secure: Optional[bool] = None,
+        transport: Optional[str] = None,
         webhook_url: Optional[str] = None,
         auth_credential: Optional[Dict[str, str]] = None,
         auth_addresses: Optional[List[Dict[str, str]]] = None,
@@ -318,13 +326,16 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
     ) -> SipTrunkResource:
         """
         Asynchronously create a SIP trunk.
+
+        ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``; when omitted the API
+        derives it from ``secure``.
         """
         _validate_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
         payload = _build_trunk_payload(
             name, domain_name, authentication_type,
-            channel_limit, recording, secure, None,
+            channel_limit, recording, secure, transport, None,
             webhook_url, auth_credential, auth_addresses,
             inbound_route, secret_id, webhook_api_version, ip_acl_id,
         )
@@ -362,6 +373,7 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         channel_limit: Optional[int] = None,
         recording: Optional[bool] = None,
         secure: Optional[bool] = None,
+        transport: Optional[str] = None,
         is_active: Optional[bool] = None,
         webhook_url: Optional[str] = None,
         webhook_api_version: Optional[str] = None,
@@ -380,7 +392,7 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         )
         payload = _build_trunk_payload(
             name, None, authentication_type,
-            channel_limit, recording, secure, is_active,
+            channel_limit, recording, secure, transport, is_active,
             webhook_url, auth_credential, auth_addresses,
             inbound_route, secret_id, webhook_api_version, ip_acl_id,
         )

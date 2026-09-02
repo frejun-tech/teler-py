@@ -20,7 +20,9 @@ TRUNK_JSON = {
     "cps_limit": 5,
     "recording_enabled": True,
     "secure": False,
+    "transport": "tcp",
     "is_active": True,
+    "authentication_type": "credential",
     "auth_ip_addresses": ["10.0.0.1"],
     "auth_credential_usernames": ["sipuser"],
     "sip_route": {"name": "route-1", "sip_url": "sip.example.com"},
@@ -72,6 +74,7 @@ def test_sip_trunks_create_sends_payload_and_returns_resource():
             auth_credential={"username": "sipuser", "password": "sippass"},
             channel_limit=10,
             recording=True,
+            transport="tls",
         )
 
         assert route.called
@@ -82,6 +85,7 @@ def test_sip_trunks_create_sends_payload_and_returns_resource():
         assert body["auth_credential"] == {"username": "sipuser", "password": "sippass"}
         assert body["channel_limit"] == 10
         assert body["recording"] is True
+        assert body["transport"] == "tls"
         assert "webhook_url" not in body
         assert isinstance(trunk, SipTrunkResource)
         assert trunk.id == "st_123"
@@ -158,6 +162,8 @@ def test_sip_trunks_retrieve_returns_resource():
         assert isinstance(trunk, SipTrunkResource)
         assert trunk.id == "st_123"
         assert trunk.cps_limit == 5
+        assert trunk.transport == "tcp"
+        assert trunk.authentication_type == "credential"
 
 
 def test_sip_trunks_retrieve_unwraps_data_envelope():
@@ -215,11 +221,13 @@ async def test_async_sip_trunks_update_returns_resource():
         )
         client = AsyncClient(api_key="test_api_key")
 
-        trunk = await client.sip.trunks.update("st_123", channel_limit=20)
+        trunk = await client.sip.trunks.update(
+            "st_123", channel_limit=20, transport="tcp"
+        )
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
-        assert body == {"channel_limit": 20}
+        assert body == {"channel_limit": 20, "transport": "tcp"}
         assert isinstance(trunk, SipTrunkResource)
 
 
