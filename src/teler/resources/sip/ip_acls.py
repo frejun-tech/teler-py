@@ -1,5 +1,5 @@
 import ipaddress
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 from teler import exceptions
 from teler.resources.base import (
@@ -21,6 +21,8 @@ PATHS: Dict[str, str] = {
 MAX_ENTRIES_PER_IP_ACL = 50
 MAX_NAME_LENGTH = 64
 MAX_DESCRIPTION_LENGTH = 255
+# The API refuses anything broader, per address family.
+MIN_PREFIX_LENGTHS = {4: 24, 6: 64}
 
 
 def _build_list_params(
@@ -40,13 +42,42 @@ def _build_list_params(
     return {k: v for k, v in params.items() if v is not None}
 
 
-def _network_key(address: str) -> str:
-    """Canonical form of an address or CIDR network, host bits stripped.
+IpNetwork = Union[ipaddress.IPv4Network, ipaddress.IPv6Network]
+
+
+def _parse_network(address: str) -> IpNetwork:
+    """Parse an address or CIDR network, host bits stripped.
 
     The API stores networks canonically, so ``203.0.113.7/24`` and
     ``203.0.113.0/24`` are the same entry as far as duplicate detection goes.
     """
-    return str(ipaddress.ip_network(address.strip(), strict=False))
+    return ipaddress.ip_network(address.strip(), strict=False)
+
+
+def _validate_network_usable(address: str, network: IpNetwork) -> None:
+    """Reject networks the API will not accept as a SIP source.
+
+    Checked in the server's own order — the prefix cap first, then usability —
+    so a value tripping both rules (``127.0.0.0/8``) reports the same reason
+    the API would.
+    """
+    minimum = MIN_PREFIX_LENGTHS[network.version]
+    if network.prefixlen < minimum:
+        raise exceptions.BadParametersException(
+            param="addresses",
+            msg=(
+                f"'{address}' covers too many addresses; "
+                f"use /{minimum} or narrower."
+            ),
+        )
+    if (
+        network.network_address.is_unspecified
+        or network.network_address.is_loopback
+    ):
+        raise exceptions.BadParametersException(
+            param="addresses",
+            msg=f"'{address}' is not a usable SIP source address.",
+        )
 
 
 def _validate_name(name: Optional[str], required: bool) -> None:
@@ -76,9 +107,11 @@ def _validate_addresses(
 
     The schema declares only ``minItems: 1``. The API additionally caps a list at
     50 entries, rejects duplicates once networks are canonicalised, requires each
-    address to parse as IPv4/IPv6 or CIDR, and caps a description at 255
-    characters. All four are checked here so a bad entry fails before the
-    round-trip, naming the offending address rather than a list index.
+    address to parse as IPv4/IPv6 or CIDR, refuses networks broader than /24
+    (IPv4) or /64 (IPv6), refuses loopback and unspecified addresses as SIP
+    sources, and caps a description at 255 characters. All of them are checked
+    here so a bad entry fails before the round-trip, naming the offending
+    address rather than a list index.
     """
     if addresses is None:
         if required:
@@ -109,12 +142,14 @@ def _validate_addresses(
             )
         address = entry["address"]
         try:
-            key = _network_key(address)
+            network = _parse_network(address)
         except (ValueError, AttributeError):
             raise exceptions.BadParametersException(
                 param="addresses",
                 msg=f"'{address}' is not a valid IPv4/IPv6 address or CIDR network.",
             )
+        _validate_network_usable(address, network)
+        key = str(network)
         if key in seen:
             raise exceptions.BadParametersException(
                 param="addresses",
