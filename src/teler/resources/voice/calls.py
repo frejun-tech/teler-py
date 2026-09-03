@@ -136,7 +136,7 @@ class CallResourceManager(BaseResourceManager):
             self.resource(_unwrap(res.json())),
         )
 
-    def get_legs(self, call_id: str) -> CursorPage:
+    def list_legs(self, call_id: str) -> CursorPage:
         res = self.client.request(
             "GET",
             self.paths["legs"].format(call_id),
@@ -208,7 +208,7 @@ class AsyncCallResourceManager(AsyncBaseResourceManager):
             self.resource(_unwrap(res.json())),
         )
 
-    async def get_legs(self, call_id: str) -> CursorPage:
+    async def list_legs(self, call_id: str) -> CursorPage:
         res = await self.client.request(
             "GET",
             self.paths["legs"].format(call_id),

@@ -50,7 +50,7 @@ names — the async versions are awaitable.
 
 | Namespace | Methods |
 |---|---|
-| `client.voice.calls` | `create`, `list`, `retrieve`, `get_legs` |
+| `client.voice.calls` | `create`, `list`, `retrieve`, `list_legs` |
 | `client.voice.apps` | `create`, `list`, `retrieve`, `update`, `delete`, `list_virtual_numbers` |
 | `client.voice.mutations` | `play`, `dtmf`, `mute`, `hangup` |
 | `client.voice.operations` | `transfer` |
