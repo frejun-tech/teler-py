@@ -65,3 +65,74 @@ async def test_async_client_context_manager():
         assert isinstance(client.voice, AsyncVoiceResourceManager)
     # After context, the client should be closed
     assert client.httpx_client.is_closed
+
+
+# Header merge precedence
+def test_client_headers_override_sdk_defaults():
+    client = Client(
+        api_key=TEST_API_KEY, headers={"User-Agent": "my-app/1.0"}
+    )
+
+    assert client.httpx_client.headers["user-agent"] == "my-app/1.0"
+
+
+def test_client_headers_override_is_case_insensitive():
+    """A lowercase key must beat the TitleCase default, not sit beside it."""
+    client = Client(
+        api_key=TEST_API_KEY, headers={"user-agent": "my-app/1.0"}
+    )
+
+    assert client.httpx_client.headers["user-agent"] == "my-app/1.0"
+
+
+def test_client_headers_cannot_displace_the_api_key():
+    client = Client(api_key=TEST_API_KEY, headers={"X-Api-Key": "evil"})
+
+    assert client.httpx_client.headers["x-api-key"] == TEST_API_KEY
+
+
+def test_client_passes_through_unrelated_headers():
+    client = Client(api_key=TEST_API_KEY, headers={"X-Trace-Id": "t1"})
+
+    assert client.httpx_client.headers["x-trace-id"] == "t1"
+
+
+def test_client_applies_defaults_when_no_headers_given():
+    client = Client(api_key=TEST_API_KEY)
+    headers = client.httpx_client.headers
+
+    assert headers["content-type"] == "application/json"
+    assert headers["accept"] == "application/json"
+    assert headers["user-agent"].startswith("teler/")
+    assert headers["x-api-key"] == TEST_API_KEY
+
+
+@pytest.mark.asyncio
+async def test_async_client_headers_override_sdk_defaults():
+    client = AsyncClient(
+        api_key=TEST_API_KEY, headers={"user-agent": "my-app/1.0"}
+    )
+
+    assert client.httpx_client.headers["user-agent"] == "my-app/1.0"
+
+    await client.httpx_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_async_client_headers_cannot_displace_the_api_key():
+    client = AsyncClient(api_key=TEST_API_KEY, headers={"X-Api-Key": "evil"})
+
+    assert client.httpx_client.headers["x-api-key"] == TEST_API_KEY
+
+    await client.httpx_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_async_client_applies_defaults_when_no_headers_given():
+    client = AsyncClient(api_key=TEST_API_KEY)
+    headers = client.httpx_client.headers
+
+    assert headers["accept"] == "application/json"
+    assert headers["user-agent"].startswith("teler/")
+
+    await client.httpx_client.aclose()
