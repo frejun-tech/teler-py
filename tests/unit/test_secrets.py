@@ -222,3 +222,16 @@ async def test_async_secrets_delete_returns_result():
         assert route.called
         assert isinstance(result, DeleteResult)
         assert result.success is True
+
+
+# --- repr ---
+def test_secret_repr_omits_secret_value():
+    """repr() hides secret_value but keeps the other fields readable."""
+    secret = SecretResource(SECRET_JSON)
+
+    text = repr(secret)
+
+    assert "whsec_abc123" not in text
+    assert "secret_value" not in text
+    assert "prod-secret" in text
+    assert secret.secret_value == "whsec_abc123"

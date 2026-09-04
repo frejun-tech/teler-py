@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, cast
 
 from teler.resources.base import (
@@ -25,7 +25,7 @@ class SecretResource(BaseResource):
     """Represents a webhook signing secret returned by the Teler API."""
     id: str
     name: Optional[str]
-    secret_value: Optional[str]
+    secret_value: Optional[str] = field(repr=False)
     rotated_at: Optional[str]
     created_at: Optional[str]
     needs_rotation: Optional[bool]
