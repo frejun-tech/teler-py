@@ -8,7 +8,7 @@ persistence and S3 layers are stubbed, because those need Postgres and AWS.
 What this catches that ``respx`` mocks cannot:
   * a wrong path (a mock asserts the path the SDK already uses)
   * query/body encoding the API's validators reject
-  * response keys the SDK's dataclasses fail to declare
+  * response keys the SDK's dataclasses read under the wrong name
 
 Requires the backend source and its dependencies. Set TELER_BACKEND_PATH.
 """

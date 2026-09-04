@@ -235,3 +235,10 @@ def test_secret_repr_omits_secret_value():
     assert "secret_value" not in text
     assert "prod-secret" in text
     assert secret.secret_value == "whsec_abc123"
+
+
+def test_secret_repr_stays_clean_with_the_raw_body_attached():
+    secret = SecretResource(SECRET_JSON)
+
+    assert "whsec_abc123" not in repr(secret)
+    assert secret.raw["secret_value"] == "whsec_abc123"

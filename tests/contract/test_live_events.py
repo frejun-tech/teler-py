@@ -2,10 +2,10 @@
 
 Two things here can only be proven with the real API in the loop:
 
-* ``WebhookEventResponse.event_type`` carries ``alias="type"``. If FastAPI
-  serialized it under the field name, the SDK's ``EventResource`` would raise
-  ``TypeError: Unknown fields: {'event_type'}`` — its ``BaseResource`` rejects
-  undeclared keys. Only a real response settles which key lands on the wire.
+* ``WebhookEventResponse.event_type`` carries ``alias="type"``. The SDK reads
+  ``type``, so if FastAPI serialized it under the field name instead,
+  ``EventResource.type`` would read back ``None``. Only a real response settles
+  which key lands on the wire.
 * redelivery outside the replay window really returns 410, which is the status
   the SDK had unmapped until now.
 """

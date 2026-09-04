@@ -8,16 +8,18 @@ from .. import exceptions
 
 @dataclass
 class BaseResource(ABC):
-    """Base class for all resource objects."""
+    """Base class for all resource objects.
+
+    Declared fields are set from ``data``; undeclared keys are ignored.
+    ``raw`` holds the full body.
+    """
 
     def __init__(self, data: Dict[str, Any]):
-        # Match only declared fields; raise on extra keys
         names = {f.name for f in dataclass_fields(self)}
-        unknown = set(data) - names
-        if unknown:
-            raise TypeError(f"Unknown fields: {unknown}")
         for name in names:
             setattr(self, name, data.get(name))
+        # Not a dataclass field: absent from __repr__ and __eq__.
+        self.raw = data
 
 
 @dataclass
