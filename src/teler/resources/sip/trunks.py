@@ -198,8 +198,11 @@ class SipTrunkResourceManager(BaseResourceManager):
         (inline, up to five) or ``ip_acl_id`` (a reusable list from
         ``client.sip.ip_acls``).
 
-        ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``; when omitted the API
-        derives it from ``secure`` (``True`` → ``"tls"``, else ``"tcp"``).
+        ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``. Pass ``transport``
+        or ``secure``, never both — the API rejects a payload carrying both, as
+        ``transport`` supersedes ``secure``. When only ``secure`` is given the
+        API derives the transport from it (``True`` → ``"tls"``, else
+        ``"tcp"``). ``"udp"`` is only accepted with credential authentication.
         """
         _validate_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
@@ -257,6 +260,11 @@ class SipTrunkResourceManager(BaseResourceManager):
     ) -> SipTrunkResource:
         """
         Update a SIP trunk by its id.
+
+        Pass ``transport`` or ``secure``, never both — the API rejects both
+        together. Changing the authentication of a trunk requires
+        ``authentication_type`` alongside whichever of ``auth_credential``,
+        ``auth_addresses`` or ``ip_acl_id`` you supply.
         """
         _validate_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
@@ -327,8 +335,9 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         """
         Asynchronously create a SIP trunk.
 
-        ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``; when omitted the API
-        derives it from ``secure``.
+        ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``. Pass ``transport``
+        or ``secure``, never both — the API rejects both together. ``"udp"``
+        is only accepted with credential authentication.
         """
         _validate_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
@@ -386,6 +395,9 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
     ) -> SipTrunkResource:
         """
         Asynchronously update a SIP trunk by its id.
+
+        Pass ``transport`` or ``secure``, never both. Changing authentication
+        requires ``authentication_type`` alongside the auth material.
         """
         _validate_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
