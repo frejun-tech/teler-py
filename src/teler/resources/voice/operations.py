@@ -4,18 +4,13 @@ from teler.idempotency import resolve_idempotency_key
 from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
+    unwrap_data,
 )
 from .types import TransferResource
 
 PATHS: Dict[str, str] = {
     "transfer": "/voice/calls/{}/transfer",
 }
-
-
-def _unwrap(body: Dict[str, Any]) -> Dict[str, Any]:
-    if isinstance(body, dict) and isinstance(body.get("data"), dict):
-        return body["data"]
-    return body
 
 
 def _idempotency_headers(idempotency_key: Optional[str]) -> Dict[str, str]:
@@ -73,7 +68,7 @@ class OperationResourceManager(BaseResourceManager):
             headers=headers,
         )
 
-        return cast(TransferResource, self.resource(_unwrap(res.json())))
+        return cast(TransferResource, self.resource(unwrap_data(res.json())))
 
 
 class AsyncOperationResourceManager(AsyncBaseResourceManager):
@@ -127,4 +122,4 @@ class AsyncOperationResourceManager(AsyncBaseResourceManager):
             headers=headers,
         )
 
-        return cast(TransferResource, self.resource(_unwrap(res.json())))
+        return cast(TransferResource, self.resource(unwrap_data(res.json())))

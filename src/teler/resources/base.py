@@ -61,6 +61,48 @@ def validate_pagination(
         )
 
 
+def unwrap_data(body: Dict[str, Any]) -> Dict[str, Any]:
+    """Unwrap a ``{"data": {...}}`` envelope if present, else return body as-is."""
+    if isinstance(body, dict) and isinstance(body.get("data"), dict):
+        return body["data"]
+    return body
+
+
+def to_cursor_page(
+    body: Dict[str, Any], resource_cls: Type[BaseResource]
+) -> CursorPage:
+    """Wrap a raw list response body into a typed CursorPage of ``resource_cls``."""
+    return CursorPage(
+        data=[resource_cls(item) for item in body.get("data", [])],
+        next_cursor=body.get("next_cursor"),
+        previous_cursor=body.get("previous_cursor"),
+        has_more=body.get("has_more", False),
+    )
+
+
+def build_params(
+    limit: Optional[int] = None,
+    cursor_after: Optional[str] = None,
+    cursor_before: Optional[str] = None,
+    max_limit: int = 100,
+    **filters: Any,
+) -> Dict[str, Any]:
+    """Build query params for a cursor-paginated endpoint, dropping unset values.
+
+    Pagination is validated first, so a bad ``limit`` or both cursors at once
+    fails before the request is built. ``max_limit`` is only passed by the few
+    endpoints that narrow the page size below the usual 100.
+    """
+    validate_pagination(limit, cursor_after, cursor_before, max_limit)
+    params: Dict[str, Any] = {
+        **filters,
+        "limit": limit,
+        "cursor_after": cursor_after,
+        "cursor_before": cursor_before,
+    }
+    return {k: v for k, v in params.items() if v is not None}
+
+
 class BaseResourceManager(ABC):
     """Base class for all resource managers."""
 

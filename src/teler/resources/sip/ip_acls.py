@@ -6,7 +6,9 @@ from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
     CursorPage,
-    validate_pagination,
+    build_params,
+    to_cursor_page,
+    unwrap_data,
 )
 from .types import DeleteResult, IpAclResource
 
@@ -23,23 +25,6 @@ MAX_NAME_LENGTH = 64
 MAX_DESCRIPTION_LENGTH = 255
 # The API refuses anything broader, per address family.
 MIN_PREFIX_LENGTHS = {4: 24, 6: 64}
-
-
-def _build_list_params(
-    search: Optional[str],
-    limit: int,
-    cursor_after: Optional[str],
-    cursor_before: Optional[str],
-) -> Dict[str, Any]:
-    """Build the query params for listing IP ACLs, dropping unset values."""
-    validate_pagination(limit, cursor_after, cursor_before)
-    params: Dict[str, Any] = {
-        "search": search,
-        "limit": limit,
-        "cursor_after": cursor_after,
-        "cursor_before": cursor_before,
-    }
-    return {k: v for k, v in params.items() if v is not None}
 
 
 IpNetwork = Union[ipaddress.IPv4Network, ipaddress.IPv6Network]
@@ -179,23 +164,6 @@ def _build_payload(
     return {k: v for k, v in payload.items() if v is not None}
 
 
-def _unwrap(body: Dict[str, Any]) -> Dict[str, Any]:
-    """Unwrap a ``{"data": {...}}`` envelope if present, else return body as-is."""
-    if isinstance(body, dict) and isinstance(body.get("data"), dict):
-        return body["data"]
-    return body
-
-
-def _to_cursor_page(body: Dict[str, Any]) -> CursorPage:
-    """Wrap a raw list response body into a typed CursorPage of IpAclResource."""
-    return CursorPage(
-        data=[IpAclResource(item) for item in body.get("data", [])],
-        next_cursor=body.get("next_cursor"),
-        previous_cursor=body.get("previous_cursor"),
-        has_more=body.get("has_more", False),
-    )
-
-
 class IpAclResourceManager(BaseResourceManager):
     """Synchronous manager for SIP IP access control list resources."""
 
@@ -219,7 +187,7 @@ class IpAclResourceManager(BaseResourceManager):
         res = self.client.request(
             "POST", self.paths["create"], json=_build_payload(name, addresses)
         )
-        return cast(IpAclResource, self.resource(_unwrap(res.json())))
+        return cast(IpAclResource, self.resource(unwrap_data(res.json())))
 
     def list(
         self,
@@ -231,16 +199,21 @@ class IpAclResourceManager(BaseResourceManager):
         """
         List the IP access control lists in your account, newest first.
         """
-        params = _build_list_params(search, limit, cursor_after, cursor_before)
+        params = build_params(
+            search=search,
+            limit=limit,
+            cursor_after=cursor_after,
+            cursor_before=cursor_before,
+        )
         res = self.client.request("GET", self.paths["list"], params=params)
-        return _to_cursor_page(res.json())
+        return to_cursor_page(res.json(), IpAclResource)
 
     def retrieve(self, ip_acl_id: str) -> IpAclResource:
         """
         Retrieve a single IP access control list, including its addresses.
         """
         res = self.client.request("GET", self.paths["retrieve"].format(ip_acl_id))
-        return cast(IpAclResource, self.resource(_unwrap(res.json())))
+        return cast(IpAclResource, self.resource(unwrap_data(res.json())))
 
     def update(
         self,
@@ -261,7 +234,7 @@ class IpAclResourceManager(BaseResourceManager):
             self.paths["update"].format(ip_acl_id),
             json=_build_payload(name, addresses),
         )
-        return cast(IpAclResource, self.resource(_unwrap(res.json())))
+        return cast(IpAclResource, self.resource(unwrap_data(res.json())))
 
     def delete(self, ip_acl_id: str) -> DeleteResult:
         """
@@ -271,7 +244,7 @@ class IpAclResourceManager(BaseResourceManager):
         trunk can never be left without an auth source.
         """
         res = self.client.request("DELETE", self.paths["delete"].format(ip_acl_id))
-        return DeleteResult(_unwrap(res.json()))
+        return DeleteResult(unwrap_data(res.json()))
 
 
 class AsyncIpAclResourceManager(AsyncBaseResourceManager):
@@ -292,7 +265,7 @@ class AsyncIpAclResourceManager(AsyncBaseResourceManager):
         res = await self.client.request(
             "POST", self.paths["create"], json=_build_payload(name, addresses)
         )
-        return cast(IpAclResource, self.resource(_unwrap(res.json())))
+        return cast(IpAclResource, self.resource(unwrap_data(res.json())))
 
     async def list(
         self,
@@ -304,9 +277,14 @@ class AsyncIpAclResourceManager(AsyncBaseResourceManager):
         """
         Asynchronously list the IP access control lists in your account.
         """
-        params = _build_list_params(search, limit, cursor_after, cursor_before)
+        params = build_params(
+            search=search,
+            limit=limit,
+            cursor_after=cursor_after,
+            cursor_before=cursor_before,
+        )
         res = await self.client.request("GET", self.paths["list"], params=params)
-        return _to_cursor_page(res.json())
+        return to_cursor_page(res.json(), IpAclResource)
 
     async def retrieve(self, ip_acl_id: str) -> IpAclResource:
         """
@@ -315,7 +293,7 @@ class AsyncIpAclResourceManager(AsyncBaseResourceManager):
         res = await self.client.request(
             "GET", self.paths["retrieve"].format(ip_acl_id)
         )
-        return cast(IpAclResource, self.resource(_unwrap(res.json())))
+        return cast(IpAclResource, self.resource(unwrap_data(res.json())))
 
     async def update(
         self,
@@ -333,7 +311,7 @@ class AsyncIpAclResourceManager(AsyncBaseResourceManager):
             self.paths["update"].format(ip_acl_id),
             json=_build_payload(name, addresses),
         )
-        return cast(IpAclResource, self.resource(_unwrap(res.json())))
+        return cast(IpAclResource, self.resource(unwrap_data(res.json())))
 
     async def delete(self, ip_acl_id: str) -> DeleteResult:
         """
@@ -342,4 +320,4 @@ class AsyncIpAclResourceManager(AsyncBaseResourceManager):
         res = await self.client.request(
             "DELETE", self.paths["delete"].format(ip_acl_id)
         )
-        return DeleteResult(_unwrap(res.json()))
+        return DeleteResult(unwrap_data(res.json()))

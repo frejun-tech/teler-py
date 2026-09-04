@@ -4,7 +4,9 @@ from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
     CursorPage,
-    validate_pagination,
+    build_params,
+    to_cursor_page,
+    unwrap_data,
 )
 from .types import VoiceAppResource, VirtualNumberResource, DeleteResult
 
@@ -17,58 +19,6 @@ PATHS: Dict[str, str] = {
     "delete": "/voice/apps/{}",
     "virtual_numbers": "/voice/apps/{}/virtual-numbers",
 }
-
-
-def _build_list_params(
-    search: Optional[str],
-    status: Optional[List[str]],
-    limit: int,
-    cursor_after: Optional[str],
-    cursor_before: Optional[str],
-) -> Dict[str, Any]:
-    validate_pagination(limit, cursor_after, cursor_before)
-    params: Dict[str, Any] = {
-        "search": search,
-        "status": status,
-        "limit": limit,
-        "cursor_after": cursor_after,
-        "cursor_before": cursor_before,
-    }
-    return {k: v for k, v in params.items() if v is not None}
-
-
-def _build_vn_params(
-    search: Optional[str],
-    location: Optional[List[str]],
-    limit: int,
-    cursor_after: Optional[str],
-    cursor_before: Optional[str],
-) -> Dict[str, Any]:
-    # This endpoint narrows the page size to 50, unlike the usual 100.
-    validate_pagination(limit, cursor_after, cursor_before, max_limit=50)
-    params: Dict[str, Any] = {
-        "search": search,
-        "location": location,
-        "limit": limit,
-        "cursor_after": cursor_after,
-        "cursor_before": cursor_before,
-    }
-    return {k: v for k, v in params.items() if v is not None}
-
-
-def _unwrap(body: Dict[str, Any]) -> Dict[str, Any]:
-    if isinstance(body, dict) and isinstance(body.get("data"), dict):
-        return body["data"]
-    return body
-
-
-def _to_cursor_page(body: Dict[str, Any], resource_cls) -> CursorPage:
-    return CursorPage(
-        data=[resource_cls(item) for item in body.get("data", [])],
-        next_cursor=body.get("next_cursor"),
-        previous_cursor=body.get("previous_cursor"),
-        has_more=body.get("has_more", False),
-    )
 
 
 class AppResourceManager(BaseResourceManager):
@@ -98,7 +48,7 @@ class AppResourceManager(BaseResourceManager):
         }
         payload = {k: v for k, v in payload.items() if v is not None}
         res = self.client.request("POST", self.paths["create"], json=payload)
-        return cast(VoiceAppResource, self.resource(_unwrap(res.json())))
+        return cast(VoiceAppResource, self.resource(unwrap_data(res.json())))
 
     def list(
         self,
@@ -108,19 +58,19 @@ class AppResourceManager(BaseResourceManager):
         cursor_after: Optional[str] = None,
         cursor_before: Optional[str] = None,
     ) -> CursorPage:
-        params = _build_list_params(
-            search,
-            status,
-            limit,
-            cursor_after,
-            cursor_before,
+        params = build_params(
+            search=search,
+            status=status,
+            limit=limit,
+            cursor_after=cursor_after,
+            cursor_before=cursor_before,
         )
         res = self.client.request(
             "GET",
             self.paths["list"],
             params=params,
         )
-        return _to_cursor_page(res.json(), VoiceAppResource)
+        return to_cursor_page(res.json(), VoiceAppResource)
 
     def retrieve(self, voice_app_id: str) -> VoiceAppResource:
         res = self.client.request(
@@ -129,7 +79,7 @@ class AppResourceManager(BaseResourceManager):
         )
         return cast(
             VoiceAppResource,
-            self.resource(_unwrap(res.json())),
+            self.resource(unwrap_data(res.json())),
         )
 
     def update(
@@ -162,7 +112,7 @@ class AppResourceManager(BaseResourceManager):
         )
         return cast(
             VoiceAppResource,
-            self.resource(_unwrap(res.json())),
+            self.resource(unwrap_data(res.json())),
         )
 
     def delete(self, voice_app_id: str) -> DeleteResult:
@@ -170,7 +120,7 @@ class AppResourceManager(BaseResourceManager):
             "DELETE",
             self.paths["delete"].format(voice_app_id),
         )
-        return DeleteResult(_unwrap(res.json()))
+        return DeleteResult(unwrap_data(res.json()))
 
     def list_virtual_numbers(
         self,
@@ -181,19 +131,20 @@ class AppResourceManager(BaseResourceManager):
         cursor_after: Optional[str] = None,
         cursor_before: Optional[str] = None,
     ) -> CursorPage:
-        params = _build_vn_params(
-            search,
-            location,
-            limit,
-            cursor_after,
-            cursor_before,
+        params = build_params(
+            search=search,
+            location=location,
+            limit=limit,
+            cursor_after=cursor_after,
+            cursor_before=cursor_before,
+            max_limit=50,
         )
         res = self.client.request(
             "GET",
             self.paths["virtual_numbers"].format(voice_app_id),
             params=params,
         )
-        return _to_cursor_page(res.json(), VirtualNumberResource)
+        return to_cursor_page(res.json(), VirtualNumberResource)
 
 
 class AsyncAppResourceManager(AsyncBaseResourceManager):
@@ -229,7 +180,7 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         )
         return cast(
             VoiceAppResource,
-            self.resource(_unwrap(res.json())),
+            self.resource(unwrap_data(res.json())),
         )
 
     async def list(
@@ -240,19 +191,19 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         cursor_after: Optional[str] = None,
         cursor_before: Optional[str] = None,
     ) -> CursorPage:
-        params = _build_list_params(
-            search,
-            status,
-            limit,
-            cursor_after,
-            cursor_before,
+        params = build_params(
+            search=search,
+            status=status,
+            limit=limit,
+            cursor_after=cursor_after,
+            cursor_before=cursor_before,
         )
         res = await self.client.request(
             "GET",
             self.paths["list"],
             params=params,
         )
-        return _to_cursor_page(res.json(), VoiceAppResource)
+        return to_cursor_page(res.json(), VoiceAppResource)
 
     async def retrieve(self, voice_app_id: str) -> VoiceAppResource:
         res = await self.client.request(
@@ -261,7 +212,7 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         )
         return cast(
             VoiceAppResource,
-            self.resource(_unwrap(res.json())),
+            self.resource(unwrap_data(res.json())),
         )
 
     async def update(
@@ -294,7 +245,7 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         )
         return cast(
             VoiceAppResource,
-            self.resource(_unwrap(res.json())),
+            self.resource(unwrap_data(res.json())),
         )
 
     async def delete(self, voice_app_id: str) -> DeleteResult:
@@ -302,7 +253,7 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
             "DELETE",
             self.paths["delete"].format(voice_app_id),
         )
-        return DeleteResult(_unwrap(res.json()))
+        return DeleteResult(unwrap_data(res.json()))
 
     async def list_virtual_numbers(
         self,
@@ -313,16 +264,17 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         cursor_after: Optional[str] = None,
         cursor_before: Optional[str] = None,
     ) -> CursorPage:
-        params = _build_vn_params(
-            search,
-            location,
-            limit,
-            cursor_after,
-            cursor_before,
+        params = build_params(
+            search=search,
+            location=location,
+            limit=limit,
+            cursor_after=cursor_after,
+            cursor_before=cursor_before,
+            max_limit=50,
         )
         res = await self.client.request(
             "GET",
             self.paths["virtual_numbers"].format(voice_app_id),
             params=params,
         )
-        return _to_cursor_page(res.json(), VirtualNumberResource)
+        return to_cursor_page(res.json(), VirtualNumberResource)
