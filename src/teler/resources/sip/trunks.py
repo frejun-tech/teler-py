@@ -76,21 +76,22 @@ def _validate_auth_fields(
 
 
 def _build_trunk_payload(
-    name: Optional[str],
-    domain_name: Optional[str],
-    authentication_type: Optional[str],
-    channel_limit: Optional[int],
-    recording: Optional[bool],
-    secure: Optional[bool],
-    transport: Optional[str],
-    is_active: Optional[bool],
-    webhook_url: Optional[str],
-    auth_credential: Optional[Dict[str, str]],
-    auth_addresses: Optional[List[Dict[str, str]]],
-    inbound_route: Optional[Dict[str, Any]],
-    secret_id: Optional[str],
-    webhook_api_version: Optional[str],
+    *,
+    name: Optional[str] = None,
+    domain_name: Optional[str] = None,
+    authentication_type: Optional[str] = None,
+    channel_limit: Optional[int] = None,
+    recording: Optional[bool] = None,
+    secure: Optional[bool] = None,
+    transport: Optional[str] = None,
+    is_active: Optional[bool] = None,
+    webhook_url: Optional[str] = None,
+    auth_credential: Optional[Dict[str, str]] = None,
+    auth_addresses: Optional[List[Dict[str, str]]] = None,
     ip_acl_id: Optional[str] = None,
+    inbound_route: Optional[Dict[str, Any]] = None,
+    secret_id: Optional[str] = None,
+    webhook_api_version: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build a SIP trunk create/update payload, dropping unset values."""
     payload: Dict[str, Any] = {
@@ -157,10 +158,20 @@ class SipTrunkResourceManager(BaseResourceManager):
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
         payload = _build_trunk_payload(
-            name, domain_name, authentication_type,
-            channel_limit, recording, secure, transport, None,
-            webhook_url, auth_credential, auth_addresses,
-            inbound_route, secret_id, webhook_api_version, ip_acl_id,
+            name=name,
+            domain_name=domain_name,
+            authentication_type=authentication_type,
+            channel_limit=channel_limit,
+            recording=recording,
+            secure=secure,
+            transport=transport,
+            webhook_url=webhook_url,
+            auth_credential=auth_credential,
+            auth_addresses=auth_addresses,
+            ip_acl_id=ip_acl_id,
+            inbound_route=inbound_route,
+            secret_id=secret_id,
+            webhook_api_version=webhook_api_version,
         )
         res = self.client.request("POST", self.paths["create"], json=payload)
         return cast(SipTrunkResource, self.resource(unwrap_data(res.json())))
@@ -223,10 +234,20 @@ class SipTrunkResourceManager(BaseResourceManager):
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
         payload = _build_trunk_payload(
-            name, None, authentication_type,
-            channel_limit, recording, secure, transport, is_active,
-            webhook_url, auth_credential, auth_addresses,
-            inbound_route, secret_id, webhook_api_version, ip_acl_id,
+            name=name,
+            authentication_type=authentication_type,
+            channel_limit=channel_limit,
+            recording=recording,
+            secure=secure,
+            transport=transport,
+            is_active=is_active,
+            webhook_url=webhook_url,
+            auth_credential=auth_credential,
+            auth_addresses=auth_addresses,
+            ip_acl_id=ip_acl_id,
+            inbound_route=inbound_route,
+            secret_id=secret_id,
+            webhook_api_version=webhook_api_version,
         )
         res = self.client.request(
             "PATCH", self.paths["update"].format(trunk_id), json=payload
@@ -300,10 +321,20 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
         payload = _build_trunk_payload(
-            name, domain_name, authentication_type,
-            channel_limit, recording, secure, transport, None,
-            webhook_url, auth_credential, auth_addresses,
-            inbound_route, secret_id, webhook_api_version, ip_acl_id,
+            name=name,
+            domain_name=domain_name,
+            authentication_type=authentication_type,
+            channel_limit=channel_limit,
+            recording=recording,
+            secure=secure,
+            transport=transport,
+            webhook_url=webhook_url,
+            auth_credential=auth_credential,
+            auth_addresses=auth_addresses,
+            ip_acl_id=ip_acl_id,
+            inbound_route=inbound_route,
+            secret_id=secret_id,
+            webhook_api_version=webhook_api_version,
         )
         res = await self.client.request("POST", self.paths["create"], json=payload)
         return cast(SipTrunkResource, self.resource(unwrap_data(res.json())))
@@ -364,10 +395,20 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
         payload = _build_trunk_payload(
-            name, None, authentication_type,
-            channel_limit, recording, secure, transport, is_active,
-            webhook_url, auth_credential, auth_addresses,
-            inbound_route, secret_id, webhook_api_version, ip_acl_id,
+            name=name,
+            authentication_type=authentication_type,
+            channel_limit=channel_limit,
+            recording=recording,
+            secure=secure,
+            transport=transport,
+            is_active=is_active,
+            webhook_url=webhook_url,
+            auth_credential=auth_credential,
+            auth_addresses=auth_addresses,
+            ip_acl_id=ip_acl_id,
+            inbound_route=inbound_route,
+            secret_id=secret_id,
+            webhook_api_version=webhook_api_version,
         )
         res = await self.client.request(
             "PATCH", self.paths["update"].format(trunk_id), json=payload
