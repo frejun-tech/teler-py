@@ -81,11 +81,8 @@ def _merge_headers(
     """
     Merge caller headers over the SDK defaults, keyed case-insensitively.
 
-    Caller-supplied headers win over ``DEFAULT_REQUEST_HEADERS``, so a custom
-    ``User-Agent``, ``Accept`` or ``Content-Type`` reaches the API. Keys are
-    lowercased before merging, so casing does not decide the winner.
-    ``x-api-key`` is always taken from the validated ``api_key`` argument and
-    cannot be displaced by a header.
+    Caller headers take precedence over ``DEFAULT_REQUEST_HEADERS``.
+    ``x-api-key`` always comes from the ``api_key`` argument.
     """
     merged = {k.lower(): v for k, v in DEFAULT_REQUEST_HEADERS.items()}
     merged.update({k.lower(): v for k, v in (headers or {}).items()})

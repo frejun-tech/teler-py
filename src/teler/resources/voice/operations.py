@@ -43,9 +43,6 @@ class OperationResourceManager(BaseResourceManager):
         ``confirm_sound`` and ``on_failure`` are each ``{"action": ...,
         "media_url": ..., "text": ..., "voice": ..., "language": ...,
         "reason": ..., "loop": ...}``.
-
-        All nested objects are plain dicts — they are serialized straight to
-        JSON, so a dataclass would raise inside httpx.
         """
         payload: Dict[str, Any] = {
             "target": target,
@@ -97,9 +94,6 @@ class AsyncOperationResourceManager(AsyncBaseResourceManager):
         ``confirm_sound`` and ``on_failure`` are each ``{"action": ...,
         "media_url": ..., "text": ..., "voice": ..., "language": ...,
         "reason": ..., "loop": ...}``.
-
-        All nested objects are plain dicts — they are serialized straight to
-        JSON, so a dataclass would raise inside httpx.
         """
         payload: Dict[str, Any] = {
             "target": target,

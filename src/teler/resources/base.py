@@ -43,11 +43,10 @@ def validate_pagination(
     cursor_before: Optional[str] = None,
     max_limit: int = 100,
 ) -> None:
-    """Validate cursor pagination arguments before issuing a request.
+    """Validate cursor pagination arguments.
 
-    The API rejects a limit outside 1..max_limit and rejects both cursors being
-    sent together. Neither rule appears in the OpenAPI schema, so both are
-    checked here to fail fast instead of round-tripping to a 422.
+    Raises ``BadParametersException`` if ``limit`` falls outside 1..max_limit
+    or if both cursors are supplied.
     """
     if limit is not None and not 1 <= limit <= max_limit:
         raise exceptions.BadParametersException(
@@ -89,9 +88,7 @@ def build_params(
 ) -> Dict[str, Any]:
     """Build query params for a cursor-paginated endpoint, dropping unset values.
 
-    Pagination is validated first, so a bad ``limit`` or both cursors at once
-    fails before the request is built. ``max_limit`` is only passed by the few
-    endpoints that narrow the page size below the usual 100.
+    Validates pagination against ``max_limit``.
     """
     validate_pagination(limit, cursor_after, cursor_before, max_limit)
     params: Dict[str, Any] = {

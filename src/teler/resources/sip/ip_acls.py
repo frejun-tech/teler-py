@@ -42,9 +42,8 @@ def _parse_network(address: str) -> IpNetwork:
 def _validate_network_usable(address: str, network: IpNetwork) -> None:
     """Reject networks the API will not accept as a SIP source.
 
-    Checked in the server's own order — the prefix cap first, then usability —
-    so a value tripping both rules (``127.0.0.0/8``) reports the same reason
-    the API would.
+    Rejects a prefix broader than ``MIN_PREFIX_LENGTHS`` allows, then loopback
+    and unspecified addresses.
     """
     minimum = MIN_PREFIX_LENGTHS[network.version]
     if network.prefixlen < minimum:
@@ -88,15 +87,10 @@ def _validate_name(name: Optional[str], required: bool) -> None:
 def _validate_addresses(
     addresses: Optional[List[Dict[str, Any]]], required: bool
 ) -> None:
-    """Check the address rules the API enforces but the schema does not describe.
+    """Validate an IP ACL address list.
 
-    The schema declares only ``minItems: 1``. The API additionally caps a list at
-    50 entries, rejects duplicates once networks are canonicalised, requires each
-    address to parse as IPv4/IPv6 or CIDR, refuses networks broader than /24
-    (IPv4) or /64 (IPv6), refuses loopback and unspecified addresses as SIP
-    sources, and caps a description at 255 characters. All of them are checked
-    here so a bad entry fails before the round-trip, naming the offending
-    address rather than a list index.
+    Checks the entry cap, duplicates after canonicalisation, address and CIDR
+    parsing, the prefix and usability rules, and the description length.
     """
     if addresses is None:
         if required:
