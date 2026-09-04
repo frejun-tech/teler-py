@@ -7,6 +7,9 @@ name = "teler"
 dynamic = ["version"]
 description = "A helper library for FreJun Teler"
 readme = "README.md"
+# 3.9 is the floor: resources/base.py annotates `type[BaseResource]`, and
+# subscripting builtins (PEP 585) raises TypeError at import on 3.8 and older.
+requires-python = ">=3.9"
 license = { file = "LICENSE" }
 authors = [{ name="FreJun", email="robin@frejun.com" }]
 dependencies = ["websockets>=10.0", "httpx>=0.20.0"]
