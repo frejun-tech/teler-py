@@ -75,6 +75,21 @@ def _validate_auth_fields(
         )
 
 
+def _validate_transport(
+    transport: Optional[str],
+    authentication_type: Optional[str],
+) -> None:
+    """Reject ``udp`` transport unless authentication_type is ``credential``.
+
+    ``authentication_type`` of ``None`` passes unchecked.
+    """
+    if transport == "udp" and authentication_type not in (None, "credential"):
+        raise exceptions.BadParametersException(
+            param="transport",
+            msg="transport 'udp' requires authentication_type 'credential'.",
+        )
+
+
 def _build_trunk_payload(
     *,
     name: Optional[str] = None,
@@ -82,7 +97,6 @@ def _build_trunk_payload(
     authentication_type: Optional[str] = None,
     channel_limit: Optional[int] = None,
     recording: Optional[bool] = None,
-    secure: Optional[bool] = None,
     transport: Optional[str] = None,
     is_active: Optional[bool] = None,
     webhook_url: Optional[str] = None,
@@ -100,7 +114,6 @@ def _build_trunk_payload(
         "authentication_type": authentication_type,
         "channel_limit": channel_limit,
         "recording": recording,
-        "secure": secure,
         "transport": transport,
         "is_active": is_active,
         "webhook_url": webhook_url,
@@ -126,7 +139,6 @@ class SipTrunkResourceManager(BaseResourceManager):
         authentication_type: str,
         channel_limit: Optional[int] = None,
         recording: Optional[bool] = None,
-        secure: Optional[bool] = None,
         transport: Optional[str] = None,
         webhook_url: Optional[str] = None,
         auth_credential: Optional[Dict[str, str]] = None,
@@ -148,22 +160,19 @@ class SipTrunkResourceManager(BaseResourceManager):
         (inline, up to five) or ``ip_acl_id`` (a reusable list from
         ``client.sip.ip_acls``).
 
-        ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``. Pass ``transport``
-        or ``secure``, never both — the API rejects a payload carrying both, as
-        ``transport`` supersedes ``secure``. When only ``secure`` is given the
-        API derives the transport from it (``True`` → ``"tls"``, else
-        ``"tcp"``). ``"udp"`` is only accepted with credential authentication.
+        ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``; ``"udp"`` requires
+        ``authentication_type`` of ``"credential"``.
         """
         _validate_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
+        _validate_transport(transport, authentication_type)
         payload = _build_trunk_payload(
             name=name,
             domain_name=domain_name,
             authentication_type=authentication_type,
             channel_limit=channel_limit,
             recording=recording,
-            secure=secure,
             transport=transport,
             webhook_url=webhook_url,
             auth_credential=auth_credential,
@@ -210,7 +219,6 @@ class SipTrunkResourceManager(BaseResourceManager):
         name: Optional[str] = None,
         channel_limit: Optional[int] = None,
         recording: Optional[bool] = None,
-        secure: Optional[bool] = None,
         transport: Optional[str] = None,
         is_active: Optional[bool] = None,
         webhook_url: Optional[str] = None,
@@ -225,20 +233,20 @@ class SipTrunkResourceManager(BaseResourceManager):
         """
         Update a SIP trunk by its id.
 
-        Pass ``transport`` or ``secure``, never both — the API rejects both
-        together. Changing the authentication of a trunk requires
-        ``authentication_type`` alongside whichever of ``auth_credential``,
-        ``auth_addresses`` or ``ip_acl_id`` you supply.
+        Changing the authentication of a trunk requires ``authentication_type``
+        alongside whichever of ``auth_credential``, ``auth_addresses`` or
+        ``ip_acl_id`` you supply. ``transport`` of ``"udp"`` requires
+        ``authentication_type`` of ``"credential"``.
         """
         _validate_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
+        _validate_transport(transport, authentication_type)
         payload = _build_trunk_payload(
             name=name,
             authentication_type=authentication_type,
             channel_limit=channel_limit,
             recording=recording,
-            secure=secure,
             transport=transport,
             is_active=is_active,
             webhook_url=webhook_url,
@@ -300,7 +308,6 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         authentication_type: str,
         channel_limit: Optional[int] = None,
         recording: Optional[bool] = None,
-        secure: Optional[bool] = None,
         transport: Optional[str] = None,
         webhook_url: Optional[str] = None,
         auth_credential: Optional[Dict[str, str]] = None,
@@ -313,20 +320,19 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         """
         Asynchronously create a SIP trunk.
 
-        ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``. Pass ``transport``
-        or ``secure``, never both — the API rejects both together. ``"udp"``
-        is only accepted with credential authentication.
+        ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``; ``"udp"`` requires
+        ``authentication_type`` of ``"credential"``.
         """
         _validate_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
+        _validate_transport(transport, authentication_type)
         payload = _build_trunk_payload(
             name=name,
             domain_name=domain_name,
             authentication_type=authentication_type,
             channel_limit=channel_limit,
             recording=recording,
-            secure=secure,
             transport=transport,
             webhook_url=webhook_url,
             auth_credential=auth_credential,
@@ -373,7 +379,6 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         name: Optional[str] = None,
         channel_limit: Optional[int] = None,
         recording: Optional[bool] = None,
-        secure: Optional[bool] = None,
         transport: Optional[str] = None,
         is_active: Optional[bool] = None,
         webhook_url: Optional[str] = None,
@@ -388,18 +393,19 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         """
         Asynchronously update a SIP trunk by its id.
 
-        Pass ``transport`` or ``secure``, never both. Changing authentication
-        requires ``authentication_type`` alongside the auth material.
+        Changing authentication requires ``authentication_type`` alongside the
+        auth material. ``transport`` of ``"udp"`` requires
+        ``authentication_type`` of ``"credential"``.
         """
         _validate_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
+        _validate_transport(transport, authentication_type)
         payload = _build_trunk_payload(
             name=name,
             authentication_type=authentication_type,
             channel_limit=channel_limit,
             recording=recording,
-            secure=secure,
             transport=transport,
             is_active=is_active,
             webhook_url=webhook_url,
