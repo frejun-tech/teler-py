@@ -294,6 +294,91 @@ async def test_async_trunk_udp_transport_with_ip_auth_raises():
         )
 
 
+@pytest.mark.parametrize("transport", ["tls", "tcp"])
+def test_trunk_non_udp_transports_pass_with_ip_auth(transport):
+    """Only ``udp`` is tied to an authentication_type."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/sip/trunks").mock(
+            return_value=httpx.Response(201, json={"id": "st_1"})
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="IP",
+            auth_addresses=[ADDRESS], transport=transport,
+        )
+
+        body = json.loads(route.calls.last.request.content)
+        assert body["transport"] == transport
+
+
+@pytest.mark.parametrize("transport", ["tls", "tcp", "udp"])
+def test_trunk_every_transport_passes_with_credential_auth(transport):
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/sip/trunks").mock(
+            return_value=httpx.Response(201, json={"id": "st_1"})
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com",
+            authentication_type="credential", auth_credential=CREDENTIAL,
+            transport=transport,
+        )
+
+        body = json.loads(route.calls.last.request.content)
+        assert body["transport"] == transport
+
+
+@pytest.mark.parametrize("transport", ["tls", "tcp"])
+def test_trunk_update_non_udp_transports_pass_with_ip_auth(transport):
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.patch(f"{BASE}/sip/trunks/st_1").mock(
+            return_value=httpx.Response(200, json={"id": "st_1"})
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.update(
+            "st_1", authentication_type="IP", ip_acl_id="acl_123",
+            transport=transport,
+        )
+
+        body = json.loads(route.calls.last.request.content)
+        assert body["transport"] == transport
+
+
+def test_trunk_create_and_update_do_not_take_secure():
+    """The API forbids ``secure`` and ``transport`` together, so only ``transport`` is exposed."""
+    client = Client(api_key="test_api_key")
+
+    with pytest.raises(TypeError):
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com",
+            authentication_type="credential", auth_credential=CREDENTIAL,
+            secure=True,
+        )
+
+    with pytest.raises(TypeError):
+        client.sip.trunks.update("st_1", secure=True)
+
+
+@pytest.mark.asyncio
+async def test_async_trunk_udp_transport_with_credential_auth_is_allowed():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/sip/trunks").mock(
+            return_value=httpx.Response(201, json={"id": "st_1"})
+        )
+        client = AsyncClient(api_key="test_api_key")
+
+        await client.sip.trunks.create(
+            name="T", domain_name="t.example.com",
+            authentication_type="credential", auth_credential=CREDENTIAL,
+            transport="udp",
+        )
+
+        assert json.loads(route.calls.last.request.content)["transport"] == "udp"
+
+
 # --- pagination guards reach the resource methods ---
 def test_list_rejects_out_of_range_limit_before_request():
     with respx.mock(assert_all_called=False) as respx_mock:

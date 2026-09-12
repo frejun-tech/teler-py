@@ -122,6 +122,152 @@ def test_short_credential_rejected_by_real_validation(client, patch_crud, stub_t
         )
 
 
+@pytest.mark.parametrize("transport", ["tls", "tcp", "udp"])
+def test_transport_accepted_by_real_enum_with_credential_auth(
+    client, patch_crud, stub_trunk_lookup, transport
+):
+    captured = {}
+
+    async def _create(db, account_id, trunk_data):
+        captured["transport"] = trunk_data.transport.value
+        captured["fields_set"] = trunk_data.model_fields_set
+        return fake_trunk()
+
+    patch_crud(f"{TRUNKS}.create_sip_trunk", _create)
+
+    client.sip.trunks.create(
+        name="T", domain_name="t.example.com",
+        authentication_type="credential", auth_credential=CREDENTIAL,
+        transport=transport,
+    )
+
+    assert captured["transport"] == transport
+    # 'secure' alongside 'transport' is rejected by SipTrunkCreate.
+    assert "secure" not in captured["fields_set"]
+
+
+@pytest.mark.parametrize("transport", ["tls", "tcp"])
+def test_non_udp_transport_accepted_with_ip_auth(
+    client, patch_crud, stub_trunk_lookup, transport
+):
+    captured = {}
+
+    async def _create(db, account_id, trunk_data):
+        captured["transport"] = trunk_data.transport.value
+        return fake_trunk()
+
+    patch_crud(f"{TRUNKS}.create_sip_trunk", _create)
+
+    client.sip.trunks.create(
+        name="T", domain_name="t.example.com", authentication_type="IP",
+        auth_addresses=[ADDRESS], transport=transport,
+    )
+
+    assert captured["transport"] == transport
+
+
+def test_bad_transport_value_rejected_by_real_enum(client, patch_crud, stub_trunk_lookup):
+    async def _create(db, account_id, trunk_data):
+        return fake_trunk()
+
+    patch_crud(f"{TRUNKS}.create_sip_trunk", _create)
+
+    with pytest.raises(exceptions.UnprocessableRequestException):
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com",
+            authentication_type="credential", auth_credential=CREDENTIAL,
+            transport="sctp",
+        )
+
+
+def test_udp_with_ip_auth_blocked_client_side(client, patch_crud, stub_trunk_lookup):
+    called = {"value": False}
+
+    async def _create(db, account_id, trunk_data):
+        called["value"] = True
+        return fake_trunk()
+
+    patch_crud(f"{TRUNKS}.create_sip_trunk", _create)
+
+    with pytest.raises(exceptions.BadParametersException):
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="IP",
+            auth_addresses=[ADDRESS], transport="udp",
+        )
+
+    assert called["value"] is False
+
+
+def test_api_also_rejects_udp_with_ip_auth_when_guard_bypassed(live_api, patch_crud, stub_trunk_lookup):
+    """Confirms the SDK guard mirrors real API behaviour rather than inventing it."""
+    import httpx
+
+    async def _create(db, account_id, trunk_data):
+        return fake_trunk()
+
+    patch_crud(f"{TRUNKS}.create_sip_trunk", _create)
+
+    with httpx.Client(
+        base_url=live_api.base_url, headers={"x-api-key": "test_api_key"}
+    ) as raw:
+        res = raw.post(
+            "/sip/trunks",
+            json={
+                "name": "T",
+                "domain_name": "t.example.com",
+                "authentication_type": "IP",
+                "auth_addresses": [ADDRESS],
+                "transport": "udp",
+            },
+        )
+
+    assert res.status_code == 422
+    assert "udp" in res.text.lower()
+
+
+def test_api_also_rejects_udp_on_update_when_guard_bypassed(live_api, patch_crud, stub_trunk_lookup):
+    import httpx
+
+    async def _get(db, sip_trunk_id, account_id):
+        return fake_trunk()
+
+    async def _update(db, trunk_obj, data):
+        return trunk_obj
+
+    patch_crud(f"{TRUNKS}.get_sip_trunk", _get)
+    patch_crud(f"{TRUNKS}.update_sip_trunk", _update)
+
+    with httpx.Client(
+        base_url=live_api.base_url, headers={"x-api-key": "test_api_key"}
+    ) as raw:
+        res = raw.patch(
+            f"/sip/trunks/{_trunk_id()}",
+            json={"authentication_type": "IP", "ip_acl_id": None, "transport": "udp"},
+        )
+
+    assert res.status_code == 422
+    assert "udp" in res.text.lower()
+
+
+def test_update_to_udp_without_auth_type_reaches_the_api(client, patch_crud, stub_trunk_lookup):
+    """The SDK cannot know the trunk's current authentication_type, so the API decides."""
+    captured = {}
+
+    async def _get(db, sip_trunk_id, account_id):
+        return fake_trunk()
+
+    async def _update(db, trunk_obj, data):
+        captured["transport"] = data.transport.value
+        return trunk_obj
+
+    patch_crud(f"{TRUNKS}.get_sip_trunk", _get)
+    patch_crud(f"{TRUNKS}.update_sip_trunk", _update)
+
+    client.sip.trunks.update(_trunk_id(), transport="udp")
+
+    assert captured["transport"] == "udp"
+
+
 def test_list_trunks_with_status_filter(client, patch_crud, stub_trunk_lookup):
     captured = {}
 

@@ -89,7 +89,7 @@ are the hermetic counterpart to `test_live_routing.py` and share the same
 | `test_live_events.py` | list/retrieve/redeliver, the `type` alias on the wire, 410 → `GoneException`, 409 → `ConflictException` |
 | `test_live_secrets.py` | full CRUD, rotate flag, prefixed-id parsing |
 | `test_live_virtual_numbers.py` | list filters as repeated query params, assign/unassign, both-targets rejection (client guard *and* real 400) |
-| `test_live_sip.py` | trunk CRUD under `extra="forbid"`, SIP URL and credential validation, call list/retrieve |
+| `test_live_sip.py` | trunk CRUD under `extra="forbid"`, SIP URL and credential validation, transport enum and the udp/credential rule (client guard *and* real 422), call list/retrieve |
 
 ## Adding a case
 
