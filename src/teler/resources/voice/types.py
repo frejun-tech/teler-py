@@ -107,22 +107,3 @@ class TransferResource(BaseResource):
 
     def __init__(self, data: Dict[str, Any]):
         super().__init__(data)
-
-@dataclass
-class DialTarget:
-    kind: str
-    number: str
-    uri: Optional[str] = None
-    leg_id: Optional[str] = None
-    custom_headers: Optional[Dict[str, str]] = None
-
-
-@dataclass
-class TransferAction:
-    action: str
-    media_url: Optional[str] = None
-    text: Optional[str] = None
-    voice: Optional[str] = None
-    language: Optional[str] = None
-    reason: Optional[str] = None
-    loop: Optional[bool] = None

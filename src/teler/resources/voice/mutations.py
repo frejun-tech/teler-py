@@ -4,6 +4,7 @@ from teler.idempotency import resolve_idempotency_key
 from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
+    unwrap_data,
 )
 from .types import MutationResource
 
@@ -13,12 +14,6 @@ PATHS: Dict[str, str] = {
     "dtmf": "/voice/calls/{}/dtmf",
     "play": "/voice/calls/{}/play",
 }
-
-
-def _unwrap(body: Dict[str, Any]) -> Dict[str, Any]:
-    if isinstance(body, dict) and isinstance(body.get("data"), dict):
-        return body["data"]
-    return body
 
 
 def _idempotency_headers(idempotency_key: Optional[str]) -> Dict[str, str]:
@@ -51,7 +46,7 @@ class MutationResourceManager(BaseResourceManager):
             headers=headers,
         )
 
-        return cast(MutationResource, self.resource(_unwrap(res.json())))
+        return cast(MutationResource, self.resource(unwrap_data(res.json())))
 
     def mute(
         self,
@@ -74,7 +69,7 @@ class MutationResourceManager(BaseResourceManager):
             headers=headers,
         )
 
-        return cast(MutationResource, self.resource(_unwrap(res.json())))
+        return cast(MutationResource, self.resource(unwrap_data(res.json())))
 
     def dtmf(
         self,
@@ -100,7 +95,7 @@ class MutationResourceManager(BaseResourceManager):
             headers=headers,
         )
 
-        return cast(MutationResource, self.resource(_unwrap(res.json())))
+        return cast(MutationResource, self.resource(unwrap_data(res.json())))
 
     def play(
         self,
@@ -128,7 +123,7 @@ class MutationResourceManager(BaseResourceManager):
             headers=headers,
         )
 
-        return cast(MutationResource, self.resource(_unwrap(res.json())))
+        return cast(MutationResource, self.resource(unwrap_data(res.json())))
 
 
 class AsyncMutationResourceManager(AsyncBaseResourceManager):
@@ -157,7 +152,7 @@ class AsyncMutationResourceManager(AsyncBaseResourceManager):
             headers=headers,
         )
 
-        return cast(MutationResource, self.resource(_unwrap(res.json())))
+        return cast(MutationResource, self.resource(unwrap_data(res.json())))
 
     async def mute(
         self,
@@ -180,7 +175,7 @@ class AsyncMutationResourceManager(AsyncBaseResourceManager):
             headers=headers,
         )
 
-        return cast(MutationResource, self.resource(_unwrap(res.json())))
+        return cast(MutationResource, self.resource(unwrap_data(res.json())))
 
     async def dtmf(
         self,
@@ -206,7 +201,7 @@ class AsyncMutationResourceManager(AsyncBaseResourceManager):
             headers=headers,
         )
 
-        return cast(MutationResource, self.resource(_unwrap(res.json())))
+        return cast(MutationResource, self.resource(unwrap_data(res.json())))
 
     async def play(
         self,
@@ -234,4 +229,4 @@ class AsyncMutationResourceManager(AsyncBaseResourceManager):
             headers=headers,
         )
 
-        return cast(MutationResource, self.resource(_unwrap(res.json())))
+        return cast(MutationResource, self.resource(unwrap_data(res.json())))

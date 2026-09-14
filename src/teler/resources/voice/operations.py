@@ -4,18 +4,13 @@ from teler.idempotency import resolve_idempotency_key
 from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
+    unwrap_data,
 )
 from .types import TransferResource
 
 PATHS: Dict[str, str] = {
     "transfer": "/voice/calls/{}/transfer",
 }
-
-
-def _unwrap(body: Dict[str, Any]) -> Dict[str, Any]:
-    if isinstance(body, dict) and isinstance(body.get("data"), dict):
-        return body["data"]
-    return body
 
 
 def _idempotency_headers(idempotency_key: Optional[str]) -> Dict[str, str]:
@@ -39,6 +34,16 @@ class OperationResourceManager(BaseResourceManager):
         on_failure: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None,
     ) -> TransferResource:
+        """
+        Transfer a call to a new destination.
+
+        ``target`` is ``{"kind": ..., "number": ..., "uri": ..., "leg_id": ...,
+        "custom_headers": {...}}``, where ``kind`` is ``"pstn"`` (needs
+        ``number``), ``"sip"`` (needs ``uri``) or ``"leg"``. ``dial_music``,
+        ``confirm_sound`` and ``on_failure`` are each ``{"action": ...,
+        "media_url": ..., "text": ..., "voice": ..., "language": ...,
+        "reason": ..., "loop": ...}``.
+        """
         payload: Dict[str, Any] = {
             "target": target,
             "mode": mode,
@@ -60,7 +65,7 @@ class OperationResourceManager(BaseResourceManager):
             headers=headers,
         )
 
-        return cast(TransferResource, self.resource(_unwrap(res.json())))
+        return cast(TransferResource, self.resource(unwrap_data(res.json())))
 
 
 class AsyncOperationResourceManager(AsyncBaseResourceManager):
@@ -80,6 +85,16 @@ class AsyncOperationResourceManager(AsyncBaseResourceManager):
         on_failure: Optional[Dict[str, Any]] = None,
         idempotency_key: Optional[str] = None,
     ) -> TransferResource:
+        """
+        Asynchronously transfer a call to a new destination.
+
+        ``target`` is ``{"kind": ..., "number": ..., "uri": ..., "leg_id": ...,
+        "custom_headers": {...}}``, where ``kind`` is ``"pstn"`` (needs
+        ``number``), ``"sip"`` (needs ``uri``) or ``"leg"``. ``dial_music``,
+        ``confirm_sound`` and ``on_failure`` are each ``{"action": ...,
+        "media_url": ..., "text": ..., "voice": ..., "language": ...,
+        "reason": ..., "loop": ...}``.
+        """
         payload: Dict[str, Any] = {
             "target": target,
             "mode": mode,
@@ -101,4 +116,4 @@ class AsyncOperationResourceManager(AsyncBaseResourceManager):
             headers=headers,
         )
 
-        return cast(TransferResource, self.resource(_unwrap(res.json())))
+        return cast(TransferResource, self.resource(unwrap_data(res.json())))

@@ -129,3 +129,37 @@ def test_validate_pagination_allows_single_cursor_and_no_limit():
     validate_pagination(cursor_after="a")
     validate_pagination(cursor_before="b")
     validate_pagination()
+
+
+# --- unknown response keys ---
+def test_resource_ignores_keys_it_does_not_declare():
+    widget = WidgetResource({"id": "w_1", "name": "Widget", "colour": "red"})
+
+    assert widget.id == "w_1"
+    assert widget.name == "Widget"
+    assert not hasattr(widget, "colour")
+
+
+def test_resource_keeps_the_whole_body_on_raw():
+    body = {"id": "w_1", "name": "Widget", "colour": "red"}
+
+    widget = WidgetResource(body)
+
+    assert widget.raw == body
+    assert widget.raw["colour"] == "red"
+
+
+def test_resource_still_defaults_missing_keys_to_none():
+    widget = WidgetResource({"id": "w_1"})
+
+    assert widget.id == "w_1"
+    assert widget.name is None
+
+
+def test_raw_is_not_a_dataclass_field():
+    from dataclasses import fields
+
+    widget = WidgetResource({"id": "w_1", "name": "Widget", "colour": "red"})
+
+    assert "raw" not in {f.name for f in fields(widget)}
+    assert "colour" not in repr(widget)

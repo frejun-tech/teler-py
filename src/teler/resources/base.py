@@ -8,16 +8,18 @@ from .. import exceptions
 
 @dataclass
 class BaseResource(ABC):
-    """Base class for all resource objects."""
+    """Base class for all resource objects.
+
+    Declared fields are set from ``data``; undeclared keys are ignored.
+    ``raw`` holds the full body.
+    """
 
     def __init__(self, data: Dict[str, Any]):
-        # Match only declared fields; raise on extra keys
         names = {f.name for f in dataclass_fields(self)}
-        unknown = set(data) - names
-        if unknown:
-            raise TypeError(f"Unknown fields: {unknown}")
         for name in names:
             setattr(self, name, data.get(name))
+        # Not a dataclass field: absent from __repr__ and __eq__.
+        self.raw = data
 
 
 @dataclass
@@ -43,11 +45,10 @@ def validate_pagination(
     cursor_before: Optional[str] = None,
     max_limit: int = 100,
 ) -> None:
-    """Validate cursor pagination arguments before issuing a request.
+    """Validate cursor pagination arguments.
 
-    The API rejects a limit outside 1..max_limit and rejects both cursors being
-    sent together. Neither rule appears in the OpenAPI schema, so both are
-    checked here to fail fast instead of round-tripping to a 422.
+    Raises ``BadParametersException`` if ``limit`` falls outside 1..max_limit
+    or if both cursors are supplied.
     """
     if limit is not None and not 1 <= limit <= max_limit:
         raise exceptions.BadParametersException(
@@ -59,6 +60,46 @@ def validate_pagination(
             param="cursor_after",
             msg="cursor_after and cursor_before are mutually exclusive.",
         )
+
+
+def unwrap_data(body: Dict[str, Any]) -> Dict[str, Any]:
+    """Unwrap a ``{"data": {...}}`` envelope if present, else return body as-is."""
+    if isinstance(body, dict) and isinstance(body.get("data"), dict):
+        return body["data"]
+    return body
+
+
+def to_cursor_page(
+    body: Dict[str, Any], resource_cls: Type[BaseResource]
+) -> CursorPage:
+    """Wrap a raw list response body into a typed CursorPage of ``resource_cls``."""
+    return CursorPage(
+        data=[resource_cls(item) for item in body.get("data", [])],
+        next_cursor=body.get("next_cursor"),
+        previous_cursor=body.get("previous_cursor"),
+        has_more=body.get("has_more", False),
+    )
+
+
+def build_params(
+    limit: Optional[int] = None,
+    cursor_after: Optional[str] = None,
+    cursor_before: Optional[str] = None,
+    max_limit: int = 100,
+    **filters: Any,
+) -> Dict[str, Any]:
+    """Build query params for a cursor-paginated endpoint, dropping unset values.
+
+    Validates pagination against ``max_limit``.
+    """
+    validate_pagination(limit, cursor_after, cursor_before, max_limit)
+    params: Dict[str, Any] = {
+        **filters,
+        "limit": limit,
+        "cursor_after": cursor_after,
+        "cursor_before": cursor_before,
+    }
+    return {k: v for k, v in params.items() if v is not None}
 
 
 class BaseResourceManager(ABC):

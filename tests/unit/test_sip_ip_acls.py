@@ -362,7 +362,7 @@ def test_create_accepts_ipv6_and_cidr():
             name="acl",
             addresses=[
                 {"address": "2001:db8::1"},
-                {"address": "2001:db8::/32"},
+                {"address": "2001:db8::/64"},
                 {"address": "198.51.100.0/24"},
             ],
         )
@@ -515,3 +515,91 @@ def test_list_rejects_both_cursors():
 
         with pytest.raises(exceptions.BadParametersException):
             client.sip.ip_acls.list(cursor_after="a", cursor_before="b")
+
+
+def test_create_rejects_an_ipv4_network_broader_than_24():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        client = _unreachable_client(respx_mock)
+
+        with pytest.raises(exceptions.BadParametersException) as exc:
+            client.sip.ip_acls.create(
+                name="acl", addresses=[{"address": "10.0.0.0/8"}]
+            )
+
+        assert exc.value.param == "addresses"
+        assert "use /24 or narrower" in str(exc.value)
+
+
+def test_create_rejects_an_ipv6_network_broader_than_64():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        client = _unreachable_client(respx_mock)
+
+        with pytest.raises(exceptions.BadParametersException) as exc:
+            client.sip.ip_acls.create(
+                name="acl", addresses=[{"address": "2001:db8::/32"}]
+            )
+
+        assert "use /64 or narrower" in str(exc.value)
+
+
+def test_create_accepts_the_narrowest_allowed_networks():
+    """/24 and /64 are the boundary and must still be accepted."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/sip/ip-acls").mock(
+            return_value=httpx.Response(201, json=ACL_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.ip_acls.create(
+            name="acl",
+            addresses=[
+                {"address": "203.0.113.0/24"},
+                {"address": "2001:db8::/64"},
+            ],
+        )
+
+        assert route.called
+
+
+@pytest.mark.parametrize(
+    "address", ["127.0.0.1", "127.0.0.0/24", "::1", "0.0.0.0", "::"]
+)
+def test_create_rejects_loopback_and_unspecified_addresses(address):
+    with respx.mock(assert_all_called=False) as respx_mock:
+        client = _unreachable_client(respx_mock)
+
+        with pytest.raises(exceptions.BadParametersException) as exc:
+            client.sip.ip_acls.create(
+                name="acl", addresses=[{"address": address}]
+            )
+
+        assert exc.value.param == "addresses"
+        assert "not a usable SIP source address" in str(exc.value)
+
+
+def test_a_network_breaking_both_rules_reports_the_prefix_first():
+    """Mirrors the server's check order, so the message matches a real 422."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        client = _unreachable_client(respx_mock)
+
+        with pytest.raises(exceptions.BadParametersException) as exc:
+            client.sip.ip_acls.create(
+                name="acl", addresses=[{"address": "127.0.0.0/8"}]
+            )
+
+        assert "use /24 or narrower" in str(exc.value)
+
+
+def test_update_rejects_an_over_broad_network():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.patch(f"{BASE}/sip/ip-acls/acl_1").mock(
+            return_value=httpx.Response(200, json=ACL_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        with pytest.raises(exceptions.BadParametersException):
+            client.sip.ip_acls.update(
+                "acl_1", addresses=[{"address": "10.0.0.0/8"}]
+            )
+
+        assert not route.called

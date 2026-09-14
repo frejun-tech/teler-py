@@ -75,6 +75,21 @@ def _raise_for_status(res: httpx.Response) -> None:
     )
 
 
+def _merge_headers(
+    api_key: str, headers: Optional[Dict[str, str]]
+) -> Dict[str, str]:
+    """
+    Merge caller headers over the SDK defaults, keyed case-insensitively.
+
+    Caller headers take precedence over ``DEFAULT_REQUEST_HEADERS``.
+    ``x-api-key`` always comes from the ``api_key`` argument.
+    """
+    merged = {k.lower(): v for k, v in DEFAULT_REQUEST_HEADERS.items()}
+    merged.update({k.lower(): v for k, v in (headers or {}).items()})
+    merged["x-api-key"] = api_key
+    return merged
+
+
 class Client:
     """
     Synchronous HTTP Client for the Teler API.
@@ -89,24 +104,19 @@ class Client:
 
         Args:
             api_key (str): The API key for authentication.
-            headers (Optional[Dict[str, str]]): Additional headers to include in requests.
+            headers (Optional[Dict[str, str]]): Additional headers to include in
+                requests. These take precedence over the SDK defaults
+                (Content-Type, Accept, User-Agent); x-api-key is always set from
+                api_key and cannot be overridden here.
             **kwargs: Additional arguments passed to httpx.Client.
         """
         if not api_key:
             raise exceptions.BadParametersException("api_key is required")
         self.api_key = api_key
-        merged_headers = {
-            **(headers or {}),
-            **DEFAULT_REQUEST_HEADERS,
-            "X-Api-Key": self.api_key,
-        }
         base_url = kwargs.pop("base_url", constants.TELER_BASE_URL)
         self.httpx_client = httpx.Client(
             base_url=base_url,
-            headers={
-                k.lower(): v
-                for k, v in merged_headers.items()
-            },
+            headers=_merge_headers(self.api_key, headers),
             **kwargs,
         )
         self.voice = VoiceResourceManager(self)
@@ -157,24 +167,19 @@ class AsyncClient:
 
         Args:
             api_key (str): The API key for authentication.
-            headers (Optional[Dict[str, str]]): Additional headers to include in requests.
+            headers (Optional[Dict[str, str]]): Additional headers to include in
+                requests. These take precedence over the SDK defaults
+                (Content-Type, Accept, User-Agent); x-api-key is always set from
+                api_key and cannot be overridden here.
             **kwargs: Additional arguments passed to httpx.AsyncClient.
         """
         if not api_key:
             raise exceptions.BadParametersException("api_key is required")
         self.api_key = api_key
-        merged_headers = {
-            **(headers or {}),
-            **DEFAULT_REQUEST_HEADERS,
-            "X-Api-Key": self.api_key,
-        }
         base_url = kwargs.pop("base_url", constants.TELER_BASE_URL)
         self.httpx_client = httpx.AsyncClient(
             base_url=base_url,
-            headers={
-                k.lower(): v
-                for k, v in merged_headers.items()
-            },
+            headers=_merge_headers(self.api_key, headers),
             **kwargs,
         )
         self.voice = AsyncVoiceResourceManager(self)

@@ -20,7 +20,9 @@ TRUNK_JSON = {
     "cps_limit": 5,
     "recording_enabled": True,
     "secure": False,
+    "transport": "tcp",
     "is_active": True,
+    "authentication_type": "credential",
     "auth_ip_addresses": ["10.0.0.1"],
     "auth_credential_usernames": ["sipuser"],
     "sip_route": {"name": "route-1", "sip_url": "sip.example.com"},
@@ -72,6 +74,7 @@ def test_sip_trunks_create_sends_payload_and_returns_resource():
             auth_credential={"username": "sipuser", "password": "sippass"},
             channel_limit=10,
             recording=True,
+            transport="tls",
         )
 
         assert route.called
@@ -82,6 +85,7 @@ def test_sip_trunks_create_sends_payload_and_returns_resource():
         assert body["auth_credential"] == {"username": "sipuser", "password": "sippass"}
         assert body["channel_limit"] == 10
         assert body["recording"] is True
+        assert body["transport"] == "tls"
         assert "webhook_url" not in body
         assert isinstance(trunk, SipTrunkResource)
         assert trunk.id == "st_123"
@@ -158,6 +162,8 @@ def test_sip_trunks_retrieve_returns_resource():
         assert isinstance(trunk, SipTrunkResource)
         assert trunk.id == "st_123"
         assert trunk.cps_limit == 5
+        assert trunk.transport == "tcp"
+        assert trunk.authentication_type == "credential"
 
 
 def test_sip_trunks_retrieve_unwraps_data_envelope():
@@ -215,11 +221,13 @@ async def test_async_sip_trunks_update_returns_resource():
         )
         client = AsyncClient(api_key="test_api_key")
 
-        trunk = await client.sip.trunks.update("st_123", channel_limit=20)
+        trunk = await client.sip.trunks.update(
+            "st_123", channel_limit=20, transport="tcp"
+        )
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
-        assert body == {"channel_limit": 20}
+        assert body == {"channel_limit": 20, "transport": "tcp"}
         assert isinstance(trunk, SipTrunkResource)
 
 
@@ -287,3 +295,104 @@ async def test_async_sip_trunks_list_virtual_numbers_returns_cursor_page():
         assert route.called
         assert isinstance(page, CursorPage)
         assert isinstance(page.data[0], VirtualNumberResource)
+
+
+# --- payload field mapping ---
+# _build_trunk_payload takes 15 similarly-typed fields; these pin every one to
+# its wire key, so a mis-wired argument fails here rather than at the API.
+CREDENTIAL = {"username": "sipuser", "password": "sippass"}
+ROUTE = {"name": "route-1", "sip_url": "sip:sip.example.com:5060"}
+
+
+def test_create_maps_every_supported_field_to_the_payload():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/sip/trunks").mock(
+            return_value=httpx.Response(201, json=TRUNK_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.create(
+            name="Main Trunk",
+            domain_name="trunk.example.com",
+            authentication_type="credential",
+            auth_credential=CREDENTIAL,
+            channel_limit=10,
+            recording=True,
+            transport="tls",
+            webhook_url="https://example.com/webhook",
+            inbound_route=ROUTE,
+            secret_id="sec_1",
+            webhook_api_version="2026-06-01",
+        )
+
+        assert json.loads(route.calls.last.request.content) == {
+            "name": "Main Trunk",
+            "domain_name": "trunk.example.com",
+            "authentication_type": "credential",
+            "channel_limit": 10,
+            "recording": True,
+            "transport": "tls",
+            "webhook_url": "https://example.com/webhook",
+            "auth_credential": CREDENTIAL,
+            "inbound_route": ROUTE,
+            "secret_id": "sec_1",
+            "webhook_api_version": "2026-06-01",
+        }
+
+
+def test_update_maps_every_supported_field_to_the_payload():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.patch(f"{BASE}/sip/trunks/st_123").mock(
+            return_value=httpx.Response(200, json=TRUNK_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.update(
+            "st_123",
+            name="Renamed Trunk",
+            channel_limit=20,
+            recording=False,
+            transport="tcp",
+            is_active=False,
+            webhook_url="https://example.com/hook",
+            webhook_api_version="2025-08-01",
+            authentication_type="credential",
+            auth_credential=CREDENTIAL,
+            inbound_route=ROUTE,
+            secret_id="sec_2",
+        )
+
+        assert json.loads(route.calls.last.request.content) == {
+            "name": "Renamed Trunk",
+            "channel_limit": 20,
+            "recording": False,
+            "transport": "tcp",
+            "is_active": False,
+            "webhook_url": "https://example.com/hook",
+            "webhook_api_version": "2025-08-01",
+            "authentication_type": "credential",
+            "auth_credential": CREDENTIAL,
+            "inbound_route": ROUTE,
+            "secret_id": "sec_2",
+        }
+
+
+def test_create_never_sends_is_active_and_update_never_sends_domain_name():
+    """Neither field is accepted by its endpoint, and the API forbids extras."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        post = respx_mock.post(f"{BASE}/sip/trunks").mock(
+            return_value=httpx.Response(201, json=TRUNK_JSON)
+        )
+        patch = respx_mock.patch(f"{BASE}/sip/trunks/st_123").mock(
+            return_value=httpx.Response(200, json=TRUNK_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com",
+            authentication_type="credential", auth_credential=CREDENTIAL,
+        )
+        client.sip.trunks.update("st_123", name="Renamed")
+
+        assert "is_active" not in json.loads(post.calls.last.request.content)
+        assert "domain_name" not in json.loads(patch.calls.last.request.content)

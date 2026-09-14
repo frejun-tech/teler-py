@@ -28,7 +28,11 @@ class SipCallResource(BaseResource):
 
 @dataclass
 class SipTrunkResource(BaseResource):
-    """Represents a SIP trunk returned by the Teler API."""
+    """Represents a SIP trunk returned by the Teler API.
+
+    ``transport`` is the negotiated SIP transport (``"tls"``, ``"tcp"`` or
+    ``"udp"``) and ``authentication_type`` is ``"credential"`` or ``"IP"``.
+    """
     id: str
     name: Optional[str]
     domain_name: Optional[str]
@@ -37,7 +41,9 @@ class SipTrunkResource(BaseResource):
     cps_limit: Optional[int]
     recording_enabled: Optional[bool]
     secure: Optional[bool]
+    transport: Optional[str]
     is_active: Optional[bool]
+    authentication_type: Optional[str]
     auth_ip_addresses: Optional[list]
     auth_credential_usernames: Optional[list]
     ip_acl_id: Optional[str]

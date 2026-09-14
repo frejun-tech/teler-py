@@ -1,3 +1,6 @@
+from typing import Any, Optional
+
+
 class TelerException(Exception):
     message = "An exception occurred."
     code = 500
@@ -5,8 +8,8 @@ class TelerException(Exception):
     def __init__(
         self,
         msg: str = "",
-        details=None,
-        code: int = None,
+        details: Any = None,
+        code: Optional[int] = None,
     ):
         self.message = msg or self.message
         self.details = details
@@ -22,8 +25,8 @@ class BadParametersException(TelerException):
         self,
         param: str = "",
         msg: str = "",
-        details=None,
-        code: int = None,
+        details: Any = None,
+        code: Optional[int] = None,
     ):
         self.param = param
         super().__init__(
