@@ -351,15 +351,15 @@ async def test_async_voice_calls_retrieve_returns_resource():
         assert call.from_number == "+15550001111"
 
 
-# --- get legs ---
-def test_voice_calls_get_legs_returns_cursor_page():
+# --- list legs ---
+def test_voice_calls_list_legs_returns_cursor_page():
     with respx.mock(assert_all_called=False) as respx_mock:
         route = respx_mock.get(f"{BASE}/voice/calls/vc_123/legs").mock(
             return_value=httpx.Response(200, json=LEGS_LIST_JSON)
         )
         client = Client(api_key="test_api_key")
 
-        page = client.voice.calls.get_legs("vc_123")
+        page = client.voice.calls.list_legs("vc_123")
 
         assert route.called
         assert isinstance(page, CursorPage)
@@ -368,14 +368,14 @@ def test_voice_calls_get_legs_returns_cursor_page():
         assert page.data[0].role == "primary"
 
 
-def test_voice_calls_get_legs_with_pagination():
+def test_voice_calls_list_legs_with_pagination():
     with respx.mock(assert_all_called=False) as respx_mock:
         route = respx_mock.get(f"{BASE}/voice/calls/vc_123/legs").mock(
             return_value=httpx.Response(200, json=LEGS_LIST_JSON)
         )
         client = Client(api_key="test_api_key")
 
-        page = client.voice.calls.get_legs("vc_123")
+        page = client.voice.calls.list_legs("vc_123")
 
         assert route.called
         assert isinstance(page, CursorPage)
@@ -383,7 +383,7 @@ def test_voice_calls_get_legs_with_pagination():
         assert isinstance(page.data[0], CallLegResource)
 
 
-def test_voice_calls_get_legs_returns_leg_properties():
+def test_voice_calls_list_legs_returns_leg_properties():
     leg_with_details = {
         **LEG_JSON,
         "id": "leg_2",
@@ -402,7 +402,7 @@ def test_voice_calls_get_legs_returns_leg_properties():
         )
         client = Client(api_key="test_api_key")
 
-        page = client.voice.calls.get_legs("vc_123")
+        page = client.voice.calls.list_legs("vc_123")
 
         assert route.called
         leg = page.data[0]
@@ -416,14 +416,14 @@ def test_voice_calls_get_legs_returns_leg_properties():
 
 
 @pytest.mark.asyncio
-async def test_async_voice_calls_get_legs_returns_cursor_page():
+async def test_async_voice_calls_list_legs_returns_cursor_page():
     with respx.mock(assert_all_called=False) as respx_mock:
         route = respx_mock.get(f"{BASE}/voice/calls/vc_123/legs").mock(
             return_value=httpx.Response(200, json=LEGS_LIST_JSON)
         )
         client = AsyncClient(api_key="test_api_key")
 
-        page = await client.voice.calls.get_legs("vc_123")
+        page = await client.voice.calls.list_legs("vc_123")
 
         assert route.called
         assert isinstance(page, CursorPage)
