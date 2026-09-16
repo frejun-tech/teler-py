@@ -40,7 +40,6 @@ class SipTrunkResource(BaseResource):
     channel_limit: Optional[int]
     cps_limit: Optional[int]
     recording_enabled: Optional[bool]
-    secure: Optional[bool]
     transport: Optional[str]
     is_active: Optional[bool]
     authentication_type: Optional[str]
