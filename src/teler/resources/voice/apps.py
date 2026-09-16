@@ -22,6 +22,7 @@ PATHS: Dict[str, str] = {
 
 
 class AppResourceManager(BaseResourceManager):
+    """Synchronous manager for voice app resources."""
     def __init__(self, client: Any):
         super().__init__(client, VoiceAppResource, PATHS)
 
@@ -36,6 +37,11 @@ class AppResourceManager(BaseResourceManager):
         webhook_api_version: Optional[str] = None,
         channel_limit: Optional[int] = None,
     ) -> VoiceAppResource:
+        """
+        Create a voice app.
+
+        ``vn_ids`` is a list of virtual number ids to assign to the app.
+        """
         payload: Dict[str, Any] = {
             "name": name,
             "flow_url": flow_url,
@@ -58,6 +64,9 @@ class AppResourceManager(BaseResourceManager):
         cursor_after: Optional[str] = None,
         cursor_before: Optional[str] = None,
     ) -> CursorPage:
+        """
+        List voice apps, optionally filtered, as a cursor-paginated page.
+        """
         params = build_params(
             search=search,
             status=status,
@@ -73,6 +82,9 @@ class AppResourceManager(BaseResourceManager):
         return to_cursor_page(res.json(), VoiceAppResource)
 
     def retrieve(self, voice_app_id: str) -> VoiceAppResource:
+        """
+        Retrieve a single voice app by its id.
+        """
         res = self.client.request(
             "GET",
             self.paths["retrieve"].format(voice_app_id),
@@ -94,6 +106,9 @@ class AppResourceManager(BaseResourceManager):
         secret_id: Optional[str] = None,
         webhook_api_version: Optional[str] = None,
     ) -> VoiceAppResource:
+        """
+        Update a voice app by its id.
+        """
         payload: Dict[str, Any] = {
             "name": name,
             "flow_url": flow_url,
@@ -116,6 +131,9 @@ class AppResourceManager(BaseResourceManager):
         )
 
     def delete(self, voice_app_id: str) -> DeleteResult:
+        """
+        Delete a voice app by its id.
+        """
         res = self.client.request(
             "DELETE",
             self.paths["delete"].format(voice_app_id),
@@ -131,6 +149,9 @@ class AppResourceManager(BaseResourceManager):
         cursor_after: Optional[str] = None,
         cursor_before: Optional[str] = None,
     ) -> CursorPage:
+        """
+        List the virtual numbers assigned to a voice app.
+        """
         params = build_params(
             search=search,
             location=location,
@@ -148,6 +169,7 @@ class AppResourceManager(BaseResourceManager):
 
 
 class AsyncAppResourceManager(AsyncBaseResourceManager):
+    """Asynchronous manager for voice app resources."""
     def __init__(self, client: Any):
         super().__init__(client, VoiceAppResource, PATHS)
 
@@ -162,6 +184,9 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         webhook_api_version: Optional[str] = None,
         channel_limit: Optional[int] = None,
     ) -> VoiceAppResource:
+        """
+        Asynchronously create a voice app.
+        """
         payload: Dict[str, Any] = {
             "name": name,
             "flow_url": flow_url,
@@ -191,6 +216,9 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         cursor_after: Optional[str] = None,
         cursor_before: Optional[str] = None,
     ) -> CursorPage:
+        """
+        Asynchronously list voice apps as a cursor-paginated page.
+        """
         params = build_params(
             search=search,
             status=status,
@@ -206,6 +234,9 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         return to_cursor_page(res.json(), VoiceAppResource)
 
     async def retrieve(self, voice_app_id: str) -> VoiceAppResource:
+        """
+        Asynchronously retrieve a single voice app by its id.
+        """
         res = await self.client.request(
             "GET",
             self.paths["retrieve"].format(voice_app_id),
@@ -227,6 +258,9 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         secret_id: Optional[str] = None,
         webhook_api_version: Optional[str] = None,
     ) -> VoiceAppResource:
+        """
+        Asynchronously update a voice app by its id.
+        """
         payload: Dict[str, Any] = {
             "name": name,
             "flow_url": flow_url,
@@ -249,6 +283,9 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         )
 
     async def delete(self, voice_app_id: str) -> DeleteResult:
+        """
+        Asynchronously delete a voice app by its id.
+        """
         res = await self.client.request(
             "DELETE",
             self.paths["delete"].format(voice_app_id),
@@ -264,6 +301,9 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         cursor_after: Optional[str] = None,
         cursor_before: Optional[str] = None,
     ) -> CursorPage:
+        """
+        Asynchronously list the virtual numbers assigned to a voice app.
+        """
         params = build_params(
             search=search,
             location=location,
