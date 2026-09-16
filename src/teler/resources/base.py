@@ -154,7 +154,7 @@ class AsyncBaseResourceManager(ABC):
     """Base class for all async resource managers."""
 
     def __init__(
-        self, client: Any, resource: type[BaseResource], paths: Dict[str, str]
+        self, client: Any, resource: Type[BaseResource], paths: Dict[str, str]
     ):
         self.client = client
         self.resource = resource
