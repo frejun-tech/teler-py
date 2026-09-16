@@ -24,8 +24,11 @@ def test_client_init_sets_api_key_and_client_and_managers():
 
 
 def test_client_init_missing_api_key_raises():
-    with pytest.raises(exceptions.BadParametersException):
+    with pytest.raises(exceptions.BadParametersException) as exc:
         Client()
+
+    assert exc.value.param == "api_key"
+    assert "api_key is required" in str(exc.value)
 
 
 def test_client_context_manager():
@@ -53,8 +56,11 @@ async def test_async_client_init_sets_api_key_and_client_and_managers():
 
 @pytest.mark.asyncio
 async def test_async_client_init_missing_api_key_raises():
-    with pytest.raises(exceptions.BadParametersException):
+    with pytest.raises(exceptions.BadParametersException) as exc:
         AsyncClient()
+
+    assert exc.value.param == "api_key"
+    assert "api_key is required" in str(exc.value)
 
 
 @pytest.mark.asyncio

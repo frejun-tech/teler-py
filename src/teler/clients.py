@@ -111,7 +111,9 @@ class Client:
             **kwargs: Additional arguments passed to httpx.Client.
         """
         if not api_key:
-            raise exceptions.BadParametersException("api_key is required")
+            raise exceptions.BadParametersException(
+                param="api_key", msg="api_key is required"
+            )
         self.api_key = api_key
         base_url = kwargs.pop("base_url", constants.TELER_BASE_URL)
         self.httpx_client = httpx.Client(
@@ -174,7 +176,9 @@ class AsyncClient:
             **kwargs: Additional arguments passed to httpx.AsyncClient.
         """
         if not api_key:
-            raise exceptions.BadParametersException("api_key is required")
+            raise exceptions.BadParametersException(
+                param="api_key", msg="api_key is required"
+            )
         self.api_key = api_key
         base_url = kwargs.pop("base_url", constants.TELER_BASE_URL)
         self.httpx_client = httpx.AsyncClient(
