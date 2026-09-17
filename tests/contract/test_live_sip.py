@@ -268,6 +268,94 @@ def test_update_to_udp_without_auth_type_reaches_the_api(client, patch_crud, stu
     assert captured["transport"] == "udp"
 
 
+def test_cidr_auth_address_rejected_by_real_validation(client, patch_crud, stub_trunk_lookup):
+    """SipAuthAddressInput parses with IPvAnyAddress, so a CIDR network is not an address."""
+    async def _create(db, account_id, trunk_data):
+        return fake_trunk()
+
+    patch_crud(f"{TRUNKS}.create_sip_trunk", _create)
+
+    with pytest.raises(exceptions.BadParametersException):
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="IP",
+            auth_addresses=[{"name": "gw-1", "address": "203.0.113.0/24"}],
+        )
+
+
+def test_api_also_rejects_a_cidr_auth_address_when_guard_bypassed(live_api, patch_crud, stub_trunk_lookup):
+    import httpx
+
+    async def _create(db, account_id, trunk_data):
+        return fake_trunk()
+
+    patch_crud(f"{TRUNKS}.create_sip_trunk", _create)
+
+    with httpx.Client(
+        base_url=live_api.base_url, headers={"x-api-key": "test_api_key"}
+    ) as raw:
+        res = raw.post(
+            "/sip/trunks",
+            json={
+                "name": "T",
+                "domain_name": "t.example.com",
+                "authentication_type": "IP",
+                "auth_addresses": [{"name": "gw-1", "address": "203.0.113.0/24"}],
+            },
+        )
+
+    assert res.status_code == 422
+    assert "address" in res.text.lower()
+
+
+def test_api_also_requires_auth_type_on_update_when_guard_bypassed(live_api, patch_crud, stub_trunk_lookup):
+    """The SDK guard mirrors SipTrunkUpdate.validate_auth_fields."""
+    import httpx
+
+    async def _get(db, sip_trunk_id, account_id):
+        return fake_trunk()
+
+    async def _update(db, trunk_obj, data):
+        return trunk_obj
+
+    patch_crud(f"{TRUNKS}.get_sip_trunk", _get)
+    patch_crud(f"{TRUNKS}.update_sip_trunk", _update)
+
+    with httpx.Client(
+        base_url=live_api.base_url, headers={"x-api-key": "test_api_key"}
+    ) as raw:
+        res = raw.patch(
+            f"/sip/trunks/{_trunk_id()}",
+            json={"auth_addresses": [{"name": "gw-1", "address": "10.0.0.1"}]},
+        )
+
+    assert res.status_code == 422
+    assert "authentication type is required" in res.text.lower()
+
+
+def test_api_also_rejects_an_empty_auth_address_list_when_guard_bypassed(live_api, patch_crud, stub_trunk_lookup):
+    """An empty list is falsy, so it falls past the auth-material check into its own rule."""
+    import httpx
+
+    async def _get(db, sip_trunk_id, account_id):
+        return fake_trunk()
+
+    async def _update(db, trunk_obj, data):
+        return trunk_obj
+
+    patch_crud(f"{TRUNKS}.get_sip_trunk", _get)
+    patch_crud(f"{TRUNKS}.update_sip_trunk", _update)
+
+    with httpx.Client(
+        base_url=live_api.base_url, headers={"x-api-key": "test_api_key"}
+    ) as raw:
+        res = raw.patch(
+            f"/sip/trunks/{_trunk_id()}", json={"auth_addresses": []}
+        )
+
+    assert res.status_code == 422
+    assert "at least one" in res.text.lower()
+
+
 def test_list_trunks_with_status_filter(client, patch_crud, stub_trunk_lookup):
     captured = {}
 

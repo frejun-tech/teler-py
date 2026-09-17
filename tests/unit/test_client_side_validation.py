@@ -233,6 +233,127 @@ async def test_async_trunk_create_validates_auth_pairing():
         )
 
 
+# --- SIP trunk update auth rules (authentication_type is optional there) ---
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"auth_credential": CREDENTIAL},
+        {"auth_addresses": [ADDRESS]},
+        {"ip_acl_id": "acl_123"},
+    ],
+)
+def test_trunk_update_auth_material_without_auth_type_raises(kwargs):
+    client = Client(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException) as exc:
+        client.sip.trunks.update("st_1", **kwargs)
+
+    assert exc.value.param == "authentication_type"
+
+
+def test_trunk_update_empty_auth_addresses_without_auth_type_raises():
+    """An empty list is falsy, so it slips past the auth-material check above."""
+    client = Client(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException) as exc:
+        client.sip.trunks.update("st_1", auth_addresses=[])
+
+    assert exc.value.param == "auth_addresses"
+    assert "at least one" in str(exc.value)
+
+
+def test_trunk_update_empty_auth_addresses_with_ip_auth_raises():
+    client = Client(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException):
+        client.sip.trunks.update(
+            "st_1", authentication_type="IP", auth_addresses=[]
+        )
+
+
+def test_trunk_update_name_only_is_unaffected_by_the_auth_rules():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.patch(f"{BASE}/sip/trunks/st_1").mock(
+            return_value=httpx.Response(200, json={"id": "st_1"})
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.update("st_1", name="Renamed")
+
+        assert route.called
+
+
+@pytest.mark.asyncio
+async def test_async_trunk_update_auth_material_without_auth_type_raises():
+    client = AsyncClient(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException):
+        await client.sip.trunks.update("st_1", auth_credential=CREDENTIAL)
+
+
+# --- SIP trunk auth_addresses take a bare IP, not a CIDR network ---
+CIDR_ADDRESS = {"name": "gw-1", "address": "203.0.113.0/24"}
+
+
+def test_trunk_create_rejects_a_cidr_auth_address():
+    client = Client(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException) as exc:
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="IP",
+            auth_addresses=[CIDR_ADDRESS],
+        )
+
+    assert exc.value.param == "auth_addresses"
+    assert "203.0.113.0/24" in str(exc.value)
+
+
+def test_trunk_update_rejects_a_cidr_auth_address():
+    client = Client(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException):
+        client.sip.trunks.update(
+            "st_1", authentication_type="IP", auth_addresses=[CIDR_ADDRESS],
+        )
+
+
+def test_trunk_create_rejects_an_unparseable_auth_address():
+    client = Client(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException):
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="IP",
+            auth_addresses=[{"name": "gw-1", "address": "not-an-ip"}],
+        )
+
+
+def test_trunk_create_rejects_an_entry_without_an_address_key():
+    client = Client(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException):
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="IP",
+            auth_addresses=[{"name": "gw-1"}],
+        )
+
+
+def test_trunk_create_accepts_ipv6_and_ipv4_auth_addresses():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/sip/trunks").mock(
+            return_value=httpx.Response(201, json={"id": "st_1"})
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="IP",
+            auth_addresses=[ADDRESS, {"name": "gw-2", "address": "2001:db8::1"}],
+        )
+
+        assert route.called
+
+
+@pytest.mark.asyncio
+async def test_async_trunk_create_rejects_a_cidr_auth_address():
+    client = AsyncClient(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException):
+        await client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="IP",
+            auth_addresses=[CIDR_ADDRESS],
+        )
+
+
 # --- SIP trunk transport ---
 def test_trunk_udp_transport_with_ip_auth_raises():
     client = Client(api_key="test_api_key")

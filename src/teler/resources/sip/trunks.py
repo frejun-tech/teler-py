@@ -1,3 +1,4 @@
+import ipaddress
 from typing import Any, Dict, List, Optional, cast
 
 from teler import exceptions
@@ -24,13 +25,50 @@ PATHS: Dict[str, str] = {
 MAX_AUTH_ADDRESSES = 5
 
 
-def _validate_auth_fields(
+def _validate_auth_addresses(
+    auth_addresses: Optional[List[Dict[str, str]]],
+) -> None:
+    """Check the inline authentication address list.
+
+    Each entry carries a single IP address. A CIDR network is rejected, unlike
+    an IP access control list entry, which accepts one.
+    """
+    if auth_addresses is None:
+        return
+
+    if len(auth_addresses) > MAX_AUTH_ADDRESSES:
+        raise exceptions.BadParametersException(
+            param="auth_addresses",
+            msg=f"A maximum of {MAX_AUTH_ADDRESSES} authentication addresses are allowed.",
+        )
+
+    for entry in auth_addresses:
+        if not isinstance(entry, dict) or "address" not in entry:
+            raise exceptions.BadParametersException(
+                param="auth_addresses",
+                msg='Each authentication address must be a dict with an "address" key.',
+            )
+        address = entry["address"]
+        try:
+            ipaddress.ip_address(str(address).strip())
+        except ValueError:
+            raise exceptions.BadParametersException(
+                param="auth_addresses",
+                msg=(
+                    f"'{address}' is not a valid IPv4/IPv6 address. "
+                    "auth_addresses takes a single address, not a CIDR network; "
+                    "use an IP access control list for a network range."
+                ),
+            )
+
+
+def _validate_create_auth_fields(
     authentication_type: Optional[str],
     auth_credential: Optional[Dict[str, str]],
     auth_addresses: Optional[List[Dict[str, str]]],
     ip_acl_id: Optional[str] = None,
 ) -> None:
-    """Check the auth pairing the API enforces but the schema does not describe.
+    """Check the auth pairing on create.
 
     ``credential`` requires auth_credential and forbids both IP auth sources.
     ``IP`` takes exactly one of ``auth_addresses`` (up to five inline entries) or
@@ -68,11 +106,71 @@ def _validate_auth_fields(
                 ),
             )
 
-    if auth_addresses is not None and len(auth_addresses) > MAX_AUTH_ADDRESSES:
+    _validate_auth_addresses(auth_addresses)
+
+
+def _validate_update_auth_fields(
+    authentication_type: Optional[str],
+    auth_credential: Optional[Dict[str, str]],
+    auth_addresses: Optional[List[Dict[str, str]]],
+    ip_acl_id: Optional[str] = None,
+) -> None:
+    """Check the auth pairing on update, where authentication_type is optional.
+
+    Sending any auth material requires ``authentication_type`` alongside it. An
+    ``auth_addresses`` list is rejected when empty, whether or not a type is
+    given.
+    """
+    if (
+        any([ip_acl_id, auth_addresses, auth_credential])
+        and authentication_type is None
+    ):
+        raise exceptions.BadParametersException(
+            param="authentication_type",
+            msg=(
+                "authentication_type is required when updating "
+                "auth_credential, auth_addresses or ip_acl_id."
+            ),
+        )
+    if auth_addresses is not None and ip_acl_id is not None:
+        raise exceptions.BadParametersException(
+            param="ip_acl_id",
+            msg="Provide either auth_addresses or ip_acl_id, not both.",
+        )
+
+    if authentication_type == "credential":
+        if not auth_credential:
+            raise exceptions.BadParametersException(
+                param="auth_credential",
+                msg="auth_credential is required when authentication_type is 'credential'.",
+            )
+        if auth_addresses:
+            raise exceptions.BadParametersException(
+                param="auth_addresses",
+                msg="auth_addresses cannot be used when authentication_type is 'credential'.",
+            )
+        if ip_acl_id is not None:
+            raise exceptions.BadParametersException(
+                param="ip_acl_id",
+                msg="ip_acl_id cannot be used when authentication_type is 'credential'.",
+            )
+    elif authentication_type == "IP":
+        if auth_addresses is None and ip_acl_id is None:
+            raise exceptions.BadParametersException(
+                param="auth_addresses",
+                msg=(
+                    "auth_addresses or ip_acl_id is required when "
+                    "authentication_type is 'IP'."
+                ),
+            )
+
+    if auth_addresses is not None and not auth_addresses:
         raise exceptions.BadParametersException(
             param="auth_addresses",
-            msg=f"A maximum of {MAX_AUTH_ADDRESSES} authentication addresses are allowed.",
+            msg="Provide at least one authentication address.",
         )
+
+    _validate_auth_addresses(auth_addresses)
 
 
 def _validate_transport(
@@ -153,7 +251,8 @@ class SipTrunkResourceManager(BaseResourceManager):
 
         ``authentication_type`` is either ``"credential"`` or ``"IP"``.
         ``auth_credential`` is ``{"username": ..., "password": ...}``;
-        ``auth_addresses`` is a list of ``{"name": ..., "address": ...}``;
+        ``auth_addresses`` is a list of ``{"name": ..., "address": ...}``, each
+        address a single IP, not a CIDR network;
         ``inbound_route`` is ``{"name": ..., "sip_url": ..., "sip_user": ...}``.
 
         With ``"IP"``, authorise against exactly one of ``auth_addresses``
@@ -163,7 +262,7 @@ class SipTrunkResourceManager(BaseResourceManager):
         ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``; ``"udp"`` requires
         ``authentication_type`` of ``"credential"``.
         """
-        _validate_auth_fields(
+        _validate_create_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
         _validate_transport(transport, authentication_type)
@@ -238,7 +337,7 @@ class SipTrunkResourceManager(BaseResourceManager):
         ``ip_acl_id`` you supply. ``transport`` of ``"udp"`` requires
         ``authentication_type`` of ``"credential"``.
         """
-        _validate_auth_fields(
+        _validate_update_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
         _validate_transport(transport, authentication_type)
@@ -323,7 +422,7 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``; ``"udp"`` requires
         ``authentication_type`` of ``"credential"``.
         """
-        _validate_auth_fields(
+        _validate_create_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
         _validate_transport(transport, authentication_type)
@@ -397,7 +496,7 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         auth material. ``transport`` of ``"udp"`` requires
         ``authentication_type`` of ``"credential"``.
         """
-        _validate_auth_fields(
+        _validate_update_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
         _validate_transport(transport, authentication_type)
