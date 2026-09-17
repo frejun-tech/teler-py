@@ -88,6 +88,11 @@ with backends that return the SIP trunk IP ACL fields — see *Fixed* below.
   addresses — including networks broader than `/24` (IPv4) or `/64` (IPv6) and
   loopback or unspecified addresses, which are not usable SIP sources. **Code that
   caught the HTTP 400 for these cases must now catch `BadParametersException`.**
+- SIP trunk `update` enforces its own auth rules, which differ from `create`:
+  `authentication_type` is required alongside any of `auth_credential`,
+  `auth_addresses` or `ip_acl_id`, and an empty `auth_addresses` list is rejected.
+- SIP trunk `auth_addresses` entries take a single IP address. A CIDR network is
+  rejected — use `client.sip.ip_acls` for a range, which does accept one.
 - `respx` moved from the runtime dependencies to the `test` extra. It is a test-only
   mocking library and was never imported at runtime.
 
