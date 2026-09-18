@@ -30,7 +30,7 @@ TRUNK_JSON = {
     "webhook_api_version": "2026-06-01",
     "created_at": "2026-08-01T12:00:00Z",
     "updated_at": None,
-    "secret_id": "sec_1",
+    "secret_id": "sk_1",
     "secret_name": "prod-secret",
 }
 
@@ -321,7 +321,7 @@ def test_create_maps_every_supported_field_to_the_payload():
             transport="tls",
             webhook_url="https://example.com/webhook",
             inbound_route=ROUTE,
-            secret_id="sec_1",
+            secret_id="sk_1",
         )
 
         assert json.loads(route.calls.last.request.content) == {
@@ -334,7 +334,7 @@ def test_create_maps_every_supported_field_to_the_payload():
             "webhook_url": "https://example.com/webhook",
             "auth_credential": CREDENTIAL,
             "inbound_route": ROUTE,
-            "secret_id": "sec_1",
+            "secret_id": "sk_1",
             "webhook_api_version": "2026-06-01",
         }
 
@@ -357,7 +357,7 @@ def test_update_maps_every_supported_field_to_the_payload():
             authentication_type="credential",
             auth_credential=CREDENTIAL,
             inbound_route=ROUTE,
-            secret_id="sec_2",
+            secret_id="sk_2",
         )
 
         assert json.loads(route.calls.last.request.content) == {
@@ -370,7 +370,7 @@ def test_update_maps_every_supported_field_to_the_payload():
             "authentication_type": "credential",
             "auth_credential": CREDENTIAL,
             "inbound_route": ROUTE,
-            "secret_id": "sec_2",
+            "secret_id": "sk_2",
         }
 
 

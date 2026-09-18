@@ -12,7 +12,7 @@ BASE = "https://api.frejun.ai/api/v1"
 TRANSFER_JSON = {
     "id": "op_1",
     "call_id": "cs_1",
-    "status": "accepted",
+    "status": "initiated",
     "target_leg_id": "cl_2",
     "mode": "cold",
     "request_id": "req_1",

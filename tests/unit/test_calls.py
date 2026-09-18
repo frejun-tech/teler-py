@@ -12,7 +12,13 @@ BASE = "https://api.frejun.ai/api/v1"
 def test_call_create_hits_route_and_returns_call_resource():
     with respx.mock(assert_all_called=False) as respx_mock:
         route = respx_mock.post(f"{BASE}/voice/calls/initiate").mock(
-            return_value=httpx.Response(201, json={"id": "call_456"})
+            return_value=httpx.Response(
+                202,
+                json={
+                    "message": "Call initiated successfully",
+                    "data": {"id": "cs_456"},
+                },
+            )
         )
         client = Client(api_key="test_api_key")
         data = {
@@ -33,7 +39,13 @@ def test_call_create_hits_route_and_returns_call_resource():
 async def test_async_call_create_hits_route_and_returns_call_resource():
     with respx.mock(assert_all_called=False) as respx_mock:
         route = respx_mock.post(f"{BASE}/voice/calls/initiate").mock(
-            return_value=httpx.Response(201, json={"id": "call_456"})
+            return_value=httpx.Response(
+                202,
+                json={
+                    "message": "Call initiated successfully",
+                    "data": {"id": "cs_456"},
+                },
+            )
         )
         client = AsyncClient(api_key="test_api_key")
         data = {
@@ -54,10 +66,10 @@ LEGS_JSON = {
     "data": [
         {
             "id": "cl_1",
-            "call_session_id": "call_123",
+            "call_session_id": "cs_123",
             "direction": "outbound",
-            "role": "callee",
-            "state": "ended",
+            "role": "dial_target",
+            "state": "completed",
             "from_number": "+123456789",
             "to_number": "+987654321",
             "parent_leg_id": None,
@@ -77,12 +89,12 @@ LEGS_JSON = {
 
 def test_call_list_legs_returns_cursor_page_of_legs():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.get(f"{BASE}/voice/calls/call_123/legs").mock(
+        route = respx_mock.get(f"{BASE}/voice/calls/cs_123/legs").mock(
             return_value=httpx.Response(200, json=LEGS_JSON)
         )
         client = Client(api_key="test_api_key")
 
-        page = client.voice.calls.list_legs("call_123")
+        page = client.voice.calls.list_legs("cs_123")
 
         assert route.called
         assert isinstance(page, CursorPage)
@@ -94,12 +106,12 @@ def test_call_list_legs_returns_cursor_page_of_legs():
 @pytest.mark.asyncio
 async def test_async_call_list_legs_returns_cursor_page_of_legs():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.get(f"{BASE}/voice/calls/call_123/legs").mock(
+        route = respx_mock.get(f"{BASE}/voice/calls/cs_123/legs").mock(
             return_value=httpx.Response(200, json=LEGS_JSON)
         )
         client = AsyncClient(api_key="test_api_key")
 
-        page = await client.voice.calls.list_legs("call_123")
+        page = await client.voice.calls.list_legs("cs_123")
 
         assert route.called
         assert isinstance(page, CursorPage)

@@ -11,7 +11,7 @@ BASE = "https://api.frejun.ai/api/v1"
 EVENT_JSON = {
     "id": "evt_123",
     "account_id": "acc_1",
-    "call_id": "call_1",
+    "call_id": "cs_1",
     "type": "call.completed",
     "occurred_at": "2026-07-07T12:00:00Z",
     "payload": {"foo": "bar"},
@@ -36,10 +36,10 @@ def test_events_list_returns_cursor_page_and_sends_filters():
         )
         client = Client(api_key="test_api_key")
 
-        page = client.events.list(call_id="call_1")
+        page = client.events.list(call_id="cs_1")
 
         assert route.called
-        assert route.calls.last.request.url.params["call_id"] == "call_1"
+        assert route.calls.last.request.url.params["call_id"] == "cs_1"
         assert isinstance(page, CursorPage)
         assert page.has_more is True
         assert page.next_cursor == "cur_next"
@@ -55,7 +55,7 @@ async def test_async_events_list_returns_cursor_page():
         )
         client = AsyncClient(api_key="test_api_key")
 
-        page = await client.events.list(call_id="call_1")
+        page = await client.events.list(call_id="cs_1")
 
         assert route.called
         assert isinstance(page, CursorPage)

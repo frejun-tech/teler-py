@@ -11,7 +11,7 @@ from teler.resources.secrets import DeleteResult, SecretResource
 BASE = "https://api.frejun.ai/api/v1"
 
 SECRET_JSON = {
-    "id": "sec_123",
+    "id": "sk_123",
     "name": "prod-secret",
     "secret_value": "whsec_abc123",
     "rotated_at": None,
@@ -22,7 +22,7 @@ SECRET_JSON = {
 }
 
 LIST_JSON = {
-    "data": [{"id": "sec_123", "name": "prod-secret"}],
+    "data": [{"id": "sk_123", "name": "prod-secret"}],
     "next_cursor": "cur_next",
     "previous_cursor": None,
     "has_more": True,
@@ -43,7 +43,7 @@ def test_secrets_create_sends_payload_and_returns_resource():
         body = json.loads(route.calls.last.request.content)
         assert body == {"name": "prod-secret"}
         assert isinstance(secret, SecretResource)
-        assert secret.id == "sec_123"
+        assert secret.id == "sk_123"
         assert secret.secret_value == "whsec_abc123"
 
 
@@ -59,7 +59,7 @@ async def test_async_secrets_create_returns_resource():
 
         assert route.called
         assert isinstance(secret, SecretResource)
-        assert secret.id == "sec_123"
+        assert secret.id == "sk_123"
 
 
 # --- list ---
@@ -80,7 +80,7 @@ def test_secrets_list_returns_cursor_page_and_sends_filters():
         assert page.has_more is True
         assert page.next_cursor == "cur_next"
         assert isinstance(page.data[0], SecretResource)
-        assert page.data[0].id == "sec_123"
+        assert page.data[0].id == "sk_123"
 
 
 @pytest.mark.asyncio
@@ -101,41 +101,41 @@ async def test_async_secrets_list_returns_cursor_page():
 # --- retrieve ---
 def test_secrets_retrieve_returns_resource():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.get(f"{BASE}/secrets/sec_123").mock(
+        route = respx_mock.get(f"{BASE}/secrets/sk_123").mock(
             return_value=httpx.Response(200, json=SECRET_JSON)
         )
         client = Client(api_key="test_api_key")
 
-        secret = client.secrets.retrieve("sec_123")
+        secret = client.secrets.retrieve("sk_123")
 
         assert route.called
         assert isinstance(secret, SecretResource)
-        assert secret.id == "sec_123"
+        assert secret.id == "sk_123"
         assert secret.needs_rotation is False
 
 
 def test_secrets_retrieve_unwraps_data_envelope():
     with respx.mock(assert_all_called=False) as respx_mock:
-        respx_mock.get(f"{BASE}/secrets/sec_123").mock(
+        respx_mock.get(f"{BASE}/secrets/sk_123").mock(
             return_value=httpx.Response(200, json={"data": SECRET_JSON})
         )
         client = Client(api_key="test_api_key")
 
-        secret = client.secrets.retrieve("sec_123")
+        secret = client.secrets.retrieve("sk_123")
 
         assert isinstance(secret, SecretResource)
-        assert secret.id == "sec_123"
+        assert secret.id == "sk_123"
 
 
 @pytest.mark.asyncio
 async def test_async_secrets_retrieve_returns_resource():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.get(f"{BASE}/secrets/sec_123").mock(
+        route = respx_mock.get(f"{BASE}/secrets/sk_123").mock(
             return_value=httpx.Response(200, json=SECRET_JSON)
         )
         client = AsyncClient(api_key="test_api_key")
 
-        secret = await client.secrets.retrieve("sec_123")
+        secret = await client.secrets.retrieve("sk_123")
 
         assert route.called
         assert isinstance(secret, SecretResource)
@@ -145,12 +145,12 @@ async def test_async_secrets_retrieve_returns_resource():
 def test_secrets_update_sends_payload_and_returns_resource():
     rotated = {**SECRET_JSON, "secret_value": "whsec_new", "rotated_at": "2026-08-13T10:00:00Z"}
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.patch(f"{BASE}/secrets/sec_123").mock(
+        route = respx_mock.patch(f"{BASE}/secrets/sk_123").mock(
             return_value=httpx.Response(200, json=rotated)
         )
         client = Client(api_key="test_api_key")
 
-        secret = client.secrets.update("sec_123", rotate=True)
+        secret = client.secrets.update("sk_123", rotate=True)
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
@@ -163,12 +163,12 @@ def test_secrets_update_sends_payload_and_returns_resource():
 def test_secrets_update_rename_sends_name():
     renamed = {**SECRET_JSON, "name": "staging-secret"}
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.patch(f"{BASE}/secrets/sec_123").mock(
+        route = respx_mock.patch(f"{BASE}/secrets/sk_123").mock(
             return_value=httpx.Response(200, json=renamed)
         )
         client = Client(api_key="test_api_key")
 
-        secret = client.secrets.update("sec_123", name="staging-secret")
+        secret = client.secrets.update("sk_123", name="staging-secret")
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
@@ -179,12 +179,12 @@ def test_secrets_update_rename_sends_name():
 @pytest.mark.asyncio
 async def test_async_secrets_update_returns_resource():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.patch(f"{BASE}/secrets/sec_123").mock(
+        route = respx_mock.patch(f"{BASE}/secrets/sk_123").mock(
             return_value=httpx.Response(200, json=SECRET_JSON)
         )
         client = AsyncClient(api_key="test_api_key")
 
-        secret = await client.secrets.update("sec_123", rotate=True)
+        secret = await client.secrets.update("sk_123", rotate=True)
 
         assert route.called
         assert isinstance(secret, SecretResource)
@@ -193,14 +193,14 @@ async def test_async_secrets_update_returns_resource():
 # --- delete ---
 def test_secrets_delete_returns_result():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.delete(f"{BASE}/secrets/sec_123").mock(
+        route = respx_mock.delete(f"{BASE}/secrets/sk_123").mock(
             return_value=httpx.Response(
                 200, json={"success": True, "message": "Secret deleted."}
             )
         )
         client = Client(api_key="test_api_key")
 
-        result = client.secrets.delete("sec_123")
+        result = client.secrets.delete("sk_123")
 
         assert route.called
         assert isinstance(result, DeleteResult)
@@ -210,14 +210,14 @@ def test_secrets_delete_returns_result():
 @pytest.mark.asyncio
 async def test_async_secrets_delete_returns_result():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.delete(f"{BASE}/secrets/sec_123").mock(
+        route = respx_mock.delete(f"{BASE}/secrets/sk_123").mock(
             return_value=httpx.Response(
                 200, json={"success": True, "message": "Secret deleted."}
             )
         )
         client = AsyncClient(api_key="test_api_key")
 
-        result = await client.secrets.delete("sec_123")
+        result = await client.secrets.delete("sk_123")
 
         assert route.called
         assert isinstance(result, DeleteResult)

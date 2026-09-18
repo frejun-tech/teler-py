@@ -84,7 +84,7 @@ def test_voice_apps_create_with_optional_fields():
     app_json = {
         **APP_JSON,
         "fallback_url": "https://example.com/fallback",
-        "secret_id": "sec_123",
+        "secret_id": "sk_123",
     }
     with respx.mock(assert_all_called=False) as respx_mock:
         route = respx_mock.post(f"{BASE}/voice/apps").mock(
@@ -97,13 +97,13 @@ def test_voice_apps_create_with_optional_fields():
             flow_url="https://example.com/flow",
             webhook_url="https://example.com/webhook",
             fallback_url="https://example.com/fallback",
-            secret_id="sec_123",
+            secret_id="sk_123",
         )
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
         assert body["fallback_url"] == "https://example.com/fallback"
-        assert body["secret_id"] == "sec_123"
+        assert body["secret_id"] == "sk_123"
         assert body["webhook_api_version"] == "2026-06-01"
         assert isinstance(app, VoiceAppResource)
 

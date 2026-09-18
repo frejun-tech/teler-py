@@ -10,20 +10,20 @@ from teler.resources.voice.types import TransferResource
 BASE = "https://api.frejun.ai/api/v1"
 
 TRANSFER_JSON = {
-    "id": "xfer_123",
-    "call_id": "vc_123",
+    "id": "op_123",
+    "call_id": "cs_123",
     "status": "initiated",
     "target_leg_id": None,
-    "mode": "bridge",
+    "mode": "cold",
     "request_id": "req_123",
 }
 
-TRANSFER_COMPLETED_JSON = {
-    "id": "xfer_456",
-    "call_id": "vc_456",
-    "status": "completed",
-    "target_leg_id": "leg_789",
-    "mode": "supervised",
+TRANSFER_WARM_JSON = {
+    "id": "op_456",
+    "call_id": "cs_456",
+    "status": "initiated",
+    "target_leg_id": "cl_789",
+    "mode": "warm",
     "request_id": "req_456",
 }
 
@@ -31,166 +31,168 @@ TRANSFER_COMPLETED_JSON = {
 # --- transfer ---
 def test_voice_operations_transfer_sends_payload_and_returns_resource():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="bridge",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
         )
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
-        assert body["target"]["kind"] == "number"
+        assert body["target"]["kind"] == "pstn"
         assert body["target"]["number"] == "+15550003333"
-        assert body["mode"] == "bridge"
+        assert body["mode"] == "cold"
         assert isinstance(result, TransferResource)
-        assert result.id == "xfer_123"
-        assert result.mode == "bridge"
+        assert result.id == "op_123"
+        assert result.mode == "cold"
 
 
-def test_voice_operations_transfer_bridge_mode():
+def test_voice_operations_transfer_cold_mode():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550004444"},
-            mode="bridge",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550004444"},
+            mode="cold",
         )
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
-        assert body["mode"] == "bridge"
+        assert body["mode"] == "cold"
         assert isinstance(result, TransferResource)
-        assert result.mode == "bridge"
+        assert result.mode == "cold"
 
 
-def test_voice_operations_transfer_supervised_mode():
+def test_voice_operations_transfer_warm_mode():
+    # The API rejects every mode other than "cold" with a 400.
     with respx.mock(assert_all_called=False) as respx_mock:
-        respx_mock.post(f"{BASE}/voice/calls/vc_456/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_COMPLETED_JSON)
+        respx_mock.post(f"{BASE}/voice/calls/cs_456/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_WARM_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_456",
-            target={"kind": "number", "number": "+15550005555"},
-            mode="supervised",
+            "cs_456",
+            target={"kind": "pstn", "number": "+15550005555"},
+            mode="warm",
         )
 
         assert isinstance(result, TransferResource)
-        assert result.mode == "supervised"
-        assert result.status == "completed"
+        assert result.mode == "warm"
+        assert result.status == "initiated"
 
 
-def test_voice_operations_transfer_to_sip_uri():
+def test_voice_operations_transfer_to_sip_target():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
+            "cs_123",
             target={
-                "kind": "sip_uri",
+                "kind": "sip",
                 "uri": "sip:user@example.com:5060",
             },
-            mode="bridge",
+            mode="cold",
         )
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
-        assert body["target"]["kind"] == "sip_uri"
+        assert body["target"]["kind"] == "sip"
         assert body["target"]["uri"] == "sip:user@example.com:5060"
         assert isinstance(result, TransferResource)
 
 
 def test_voice_operations_transfer_to_leg():
+    # The API does not support leg targets yet and 400s on them.
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
+            "cs_123",
             target={
                 "kind": "leg",
-                "leg_id": "leg_999",
+                "leg_id": "cl_999",
             },
-            mode="bridge",
+            mode="cold",
         )
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
         assert body["target"]["kind"] == "leg"
-        assert body["target"]["leg_id"] == "leg_999"
+        assert body["target"]["leg_id"] == "cl_999"
         assert isinstance(result, TransferResource)
 
 
 def test_voice_operations_transfer_with_ringback():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="bridge",
-            ringback="https://example.com/ringback.mp3",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
+            ringback="passthrough",
         )
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
-        assert body["ringback"] == "https://example.com/ringback.mp3"
+        assert body["ringback"] == "passthrough"
         assert isinstance(result, TransferResource)
 
 
 def test_voice_operations_transfer_with_dial_music():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="bridge",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
             dial_music={
-                "kind": "file",
-                "url": "https://example.com/music.mp3",
+                "action": "play",
+                "media_url": "https://example.com/music.mp3",
             },
         )
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
-        assert body["dial_music"]["kind"] == "file"
-        assert body["dial_music"]["url"] == "https://example.com/music.mp3"
+        assert body["dial_music"]["action"] == "play"
+        assert body["dial_music"]["media_url"] == "https://example.com/music.mp3"
         assert isinstance(result, TransferResource)
 
 
 def test_voice_operations_transfer_with_timeout():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="bridge",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
             timeout=30,
         )
 
@@ -202,15 +204,15 @@ def test_voice_operations_transfer_with_timeout():
 
 def test_voice_operations_transfer_with_record():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="bridge",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
             record=True,
         )
 
@@ -222,17 +224,17 @@ def test_voice_operations_transfer_with_record():
 
 def test_voice_operations_transfer_with_confirm_sound():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="supervised",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
             confirm_sound={
-                "kind": "text",
+                "action": "say",
                 "text": "Call transferred",
                 "voice": "male",
                 "language": "en-US",
@@ -241,22 +243,22 @@ def test_voice_operations_transfer_with_confirm_sound():
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
-        assert body["confirm_sound"]["kind"] == "text"
+        assert body["confirm_sound"]["action"] == "say"
         assert body["confirm_sound"]["text"] == "Call transferred"
         assert isinstance(result, TransferResource)
 
 
 def test_voice_operations_transfer_with_on_failure():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="bridge",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
             on_failure={
                 "action": "hangup",
                 "reason": "transfer_failed",
@@ -272,15 +274,15 @@ def test_voice_operations_transfer_with_on_failure():
 
 def test_voice_operations_transfer_with_idempotency_key():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="bridge",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
             idempotency_key="idem_xfer_123",
         )
 
@@ -292,22 +294,22 @@ def test_voice_operations_transfer_with_idempotency_key():
 
 def test_voice_operations_transfer_with_custom_headers():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
+            "cs_123",
             target={
-                "kind": "sip_uri",
+                "kind": "sip",
                 "uri": "sip:user@example.com",
                 "custom_headers": {
                     "X-Custom-Header": "value",
                     "X-Another-Header": "another",
                 },
             },
-            mode="bridge",
+            mode="cold",
         )
 
         assert route.called
@@ -318,86 +320,86 @@ def test_voice_operations_transfer_with_custom_headers():
 
 def test_voice_operations_transfer_with_all_options():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="bridge",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
             timeout=30,
             record=True,
-            ringback="https://example.com/ringback.mp3",
-            dial_music={"kind": "silence"},
-            confirm_sound={"kind": "text", "text": "Transferred"},
+            ringback="passthrough",
+            dial_music={"action": "play", "media_url": "https://example.com/music.mp3"},
+            confirm_sound={"action": "say", "text": "Transferred"},
             on_failure={"action": "hangup"},
             idempotency_key="idem_full",
         )
 
         assert route.called
         body = json.loads(route.calls.last.request.content)
-        assert body["target"]["kind"] == "number"
-        assert body["mode"] == "bridge"
+        assert body["target"]["kind"] == "pstn"
+        assert body["mode"] == "cold"
         assert body["timeout"] == 30
         assert body["record"] is True
-        assert body["ringback"] == "https://example.com/ringback.mp3"
+        assert body["ringback"] == "passthrough"
         assert isinstance(result, TransferResource)
 
 
 @pytest.mark.asyncio
 async def test_async_voice_operations_transfer_returns_resource():
     with respx.mock(assert_all_called=False) as respx_mock:
-        route = respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_JSON)
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
         )
         client = AsyncClient(api_key="test_api_key")
 
         result = await client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="bridge",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
         )
 
         assert route.called
         assert isinstance(result, TransferResource)
-        assert result.id == "xfer_123"
+        assert result.id == "op_123"
 
 
 # --- data envelope unwrapping ---
 def test_voice_operations_transfer_unwraps_data_envelope():
     with respx.mock(assert_all_called=False) as respx_mock:
-        respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json={"data": TRANSFER_JSON})
+        respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json={"data": TRANSFER_JSON})
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="bridge",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
         )
 
         assert isinstance(result, TransferResource)
-        assert result.id == "xfer_123"
-        assert result.mode == "bridge"
+        assert result.id == "op_123"
+        assert result.mode == "cold"
 
 
 # --- edge cases ---
 def test_voice_operations_transfer_returns_status():
     with respx.mock(assert_all_called=False) as respx_mock:
-        respx_mock.post(f"{BASE}/voice/calls/vc_123/transfer").mock(
-            return_value=httpx.Response(200, json=TRANSFER_COMPLETED_JSON)
+        respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_WARM_JSON)
         )
         client = Client(api_key="test_api_key")
 
         result = client.voice.operations.transfer(
-            "vc_123",
-            target={"kind": "number", "number": "+15550003333"},
-            mode="bridge",
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
         )
 
         assert isinstance(result, TransferResource)
-        assert result.status == "completed"
-        assert result.target_leg_id == "leg_789"
+        assert result.status == "initiated"
+        assert result.target_leg_id == "cl_789"
