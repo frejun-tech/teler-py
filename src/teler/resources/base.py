@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from dataclasses import fields as dataclass_fields
 from typing import Any, Dict, List, Optional, Type
 
-from .. import exceptions
+from .. import constants, exceptions
 
 
 @dataclass
@@ -59,6 +59,19 @@ def validate_pagination(
         raise exceptions.BadParametersException(
             param="cursor_after",
             msg="cursor_after and cursor_before are mutually exclusive.",
+        )
+
+
+def validate_webhook_api_version(version: Optional[str]) -> None:
+    """Validate a webhook API version against the dated versions the API accepts.
+
+    ``None`` passes unchecked.
+    """
+    if version is not None and version not in constants.WEBHOOK_API_VERSIONS:
+        allowed = ", ".join(constants.WEBHOOK_API_VERSIONS)
+        raise exceptions.BadParametersException(
+            param="webhook_api_version",
+            msg=f"webhook_api_version must be one of: {allowed}.",
         )
 
 

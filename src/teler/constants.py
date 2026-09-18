@@ -1,1 +1,3 @@
 TELER_BASE_URL = "https://api.frejun.ai/api/v1"
+WEBHOOK_API_VERSION = "2026-06-01"
+WEBHOOK_API_VERSIONS = ("2025-08-01", "2026-06-01")

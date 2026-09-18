@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional, List, cast
 
+from teler import constants
 from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
@@ -7,6 +8,7 @@ from teler.resources.base import (
     build_params,
     to_cursor_page,
     unwrap_data,
+    validate_webhook_api_version,
 )
 from .types import VoiceAppResource, VirtualNumberResource, DeleteResult
 
@@ -34,7 +36,7 @@ class AppResourceManager(BaseResourceManager):
         fallback_url: Optional[str] = None,
         vn_ids: Optional[List[str]] = None,
         secret_id: Optional[str] = None,
-        webhook_api_version: Optional[str] = None,
+        webhook_api_version: str = constants.WEBHOOK_API_VERSION,
         channel_limit: Optional[int] = None,
     ) -> VoiceAppResource:
         """
@@ -42,6 +44,7 @@ class AppResourceManager(BaseResourceManager):
 
         ``vn_ids`` is a list of virtual number ids to assign to the app.
         """
+        validate_webhook_api_version(webhook_api_version)
         payload: Dict[str, Any] = {
             "name": name,
             "flow_url": flow_url,
@@ -109,6 +112,7 @@ class AppResourceManager(BaseResourceManager):
         """
         Update a voice app by its id.
         """
+        validate_webhook_api_version(webhook_api_version)
         payload: Dict[str, Any] = {
             "name": name,
             "flow_url": flow_url,
@@ -181,12 +185,13 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         fallback_url: Optional[str] = None,
         vn_ids: Optional[List[str]] = None,
         secret_id: Optional[str] = None,
-        webhook_api_version: Optional[str] = None,
+        webhook_api_version: str = constants.WEBHOOK_API_VERSION,
         channel_limit: Optional[int] = None,
     ) -> VoiceAppResource:
         """
         Asynchronously create a voice app.
         """
+        validate_webhook_api_version(webhook_api_version)
         payload: Dict[str, Any] = {
             "name": name,
             "flow_url": flow_url,
@@ -261,6 +266,7 @@ class AsyncAppResourceManager(AsyncBaseResourceManager):
         """
         Asynchronously update a voice app by its id.
         """
+        validate_webhook_api_version(webhook_api_version)
         payload: Dict[str, Any] = {
             "name": name,
             "flow_url": flow_url,

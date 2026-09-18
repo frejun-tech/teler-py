@@ -4,7 +4,7 @@ import httpx
 import pytest
 import respx
 
-from teler import AsyncClient, Client
+from teler import AsyncClient, Client, exceptions
 from teler.resources.base import CursorPage
 from teler.resources.sip.types import DeleteResult, SipTrunkResource
 from teler.resources.virtual_numbers import VirtualNumberResource
@@ -322,7 +322,6 @@ def test_create_maps_every_supported_field_to_the_payload():
             webhook_url="https://example.com/webhook",
             inbound_route=ROUTE,
             secret_id="sec_1",
-            webhook_api_version="2026-06-01",
         )
 
         assert json.loads(route.calls.last.request.content) == {
@@ -355,7 +354,6 @@ def test_update_maps_every_supported_field_to_the_payload():
             transport="tcp",
             is_active=False,
             webhook_url="https://example.com/hook",
-            webhook_api_version="2025-08-01",
             authentication_type="credential",
             auth_credential=CREDENTIAL,
             inbound_route=ROUTE,
@@ -369,12 +367,89 @@ def test_update_maps_every_supported_field_to_the_payload():
             "transport": "tcp",
             "is_active": False,
             "webhook_url": "https://example.com/hook",
-            "webhook_api_version": "2025-08-01",
             "authentication_type": "credential",
             "auth_credential": CREDENTIAL,
             "inbound_route": ROUTE,
             "secret_id": "sec_2",
         }
+
+
+def test_create_pins_the_webhook_api_version_without_being_asked():
+    """An unset field is defaulted to the old version by the API, so it is always sent."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/sip/trunks").mock(
+            return_value=httpx.Response(201, json=TRUNK_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com",
+            authentication_type="credential", auth_credential=CREDENTIAL,
+        )
+
+        body = json.loads(route.calls.last.request.content)
+        assert body["webhook_api_version"] == "2026-06-01"
+
+
+def test_update_never_sends_the_webhook_api_version():
+    """Update leaves the stored version alone."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.patch(f"{BASE}/sip/trunks/st_123").mock(
+            return_value=httpx.Response(200, json=TRUNK_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.update("st_123", name="Renamed")
+
+        assert "webhook_api_version" not in json.loads(
+            route.calls.last.request.content
+        )
+
+
+def test_create_lets_the_caller_override_the_webhook_api_version():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/sip/trunks").mock(
+            return_value=httpx.Response(201, json=TRUNK_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com",
+            authentication_type="credential", auth_credential=CREDENTIAL,
+            webhook_api_version="2025-08-01",
+        )
+
+        body = json.loads(route.calls.last.request.content)
+        assert body["webhook_api_version"] == "2025-08-01"
+
+
+def test_update_sends_the_webhook_api_version_only_when_asked():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.patch(f"{BASE}/sip/trunks/st_123").mock(
+            return_value=httpx.Response(200, json=TRUNK_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.update("st_123", webhook_api_version="2026-06-01")
+
+        body = json.loads(route.calls.last.request.content)
+        assert body["webhook_api_version"] == "2026-06-01"
+
+
+def test_trunk_rejects_an_unknown_webhook_api_version():
+    client = Client(api_key="test_api_key")
+
+    with pytest.raises(exceptions.BadParametersException) as exc:
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com",
+            authentication_type="credential", auth_credential=CREDENTIAL,
+            webhook_api_version="2024-01-01",
+        )
+
+    assert exc.value.param == "webhook_api_version"
+
+    with pytest.raises(exceptions.BadParametersException):
+        client.sip.trunks.update("st_123", webhook_api_version="2024-01-01")
 
 
 def test_create_never_sends_is_active_and_update_never_sends_domain_name():

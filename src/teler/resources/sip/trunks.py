@@ -1,7 +1,7 @@
 import ipaddress
 from typing import Any, Dict, List, Optional, cast
 
-from teler import exceptions
+from teler import constants, exceptions
 from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
@@ -9,6 +9,7 @@ from teler.resources.base import (
     build_params,
     to_cursor_page,
     unwrap_data,
+    validate_webhook_api_version,
 )
 from teler.resources.virtual_numbers import VirtualNumberResource
 from .types import DeleteResult, SipTrunkResource
@@ -244,7 +245,7 @@ class SipTrunkResourceManager(BaseResourceManager):
         ip_acl_id: Optional[str] = None,
         inbound_route: Optional[Dict[str, Any]] = None,
         secret_id: Optional[str] = None,
-        webhook_api_version: Optional[str] = None,
+        webhook_api_version: str = constants.WEBHOOK_API_VERSION,
     ) -> SipTrunkResource:
         """
         Create a SIP trunk.
@@ -262,6 +263,7 @@ class SipTrunkResourceManager(BaseResourceManager):
         ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``; ``"udp"`` requires
         ``authentication_type`` of ``"credential"``.
         """
+        validate_webhook_api_version(webhook_api_version)
         _validate_create_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
@@ -337,6 +339,7 @@ class SipTrunkResourceManager(BaseResourceManager):
         ``ip_acl_id`` you supply. ``transport`` of ``"udp"`` requires
         ``authentication_type`` of ``"credential"``.
         """
+        validate_webhook_api_version(webhook_api_version)
         _validate_update_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
@@ -414,7 +417,7 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         ip_acl_id: Optional[str] = None,
         inbound_route: Optional[Dict[str, Any]] = None,
         secret_id: Optional[str] = None,
-        webhook_api_version: Optional[str] = None,
+        webhook_api_version: str = constants.WEBHOOK_API_VERSION,
     ) -> SipTrunkResource:
         """
         Asynchronously create a SIP trunk.
@@ -422,6 +425,7 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         ``transport`` is ``"tls"``, ``"tcp"`` or ``"udp"``; ``"udp"`` requires
         ``authentication_type`` of ``"credential"``.
         """
+        validate_webhook_api_version(webhook_api_version)
         _validate_create_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )
@@ -496,6 +500,7 @@ class AsyncSipTrunkResourceManager(AsyncBaseResourceManager):
         auth material. ``transport`` of ``"udp"`` requires
         ``authentication_type`` of ``"credential"``.
         """
+        validate_webhook_api_version(webhook_api_version)
         _validate_update_auth_fields(
             authentication_type, auth_credential, auth_addresses, ip_acl_id
         )

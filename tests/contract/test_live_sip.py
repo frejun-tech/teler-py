@@ -356,6 +356,25 @@ def test_api_also_rejects_an_empty_auth_address_list_when_guard_bypassed(live_ap
     assert "at least one" in res.text.lower()
 
 
+def test_create_sends_a_webhook_api_version_the_api_accepts(client, patch_crud, stub_trunk_lookup):
+    """create_sip_trunk falls back to 2025-08-01 when the field arrives unset."""
+    captured = {}
+
+    async def _create(db, account_id, trunk_data):
+        captured["version"] = trunk_data.webhook_api_version
+        return fake_trunk()
+
+    patch_crud(f"{TRUNKS}.create_sip_trunk", _create)
+
+    client.sip.trunks.create(
+        name="T", domain_name="t.example.com",
+        authentication_type="credential", auth_credential=CREDENTIAL,
+    )
+
+    assert captured["version"] is not None
+    assert captured["version"] == "2026-06-01"
+
+
 def test_list_trunks_with_status_filter(client, patch_crud, stub_trunk_lookup):
     captured = {}
 

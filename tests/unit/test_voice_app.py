@@ -4,7 +4,7 @@ import httpx
 import pytest
 import respx
 
-from teler import AsyncClient, Client
+from teler import AsyncClient, Client, exceptions
 from teler.resources.base import CursorPage
 from teler.resources.voice.types import VoiceAppResource, DeleteResult
 from teler.resources.virtual_numbers import VirtualNumberResource
@@ -98,7 +98,6 @@ def test_voice_apps_create_with_optional_fields():
             webhook_url="https://example.com/webhook",
             fallback_url="https://example.com/fallback",
             secret_id="sec_123",
-            webhook_api_version="2026-06-01",
         )
 
         assert route.called
@@ -107,6 +106,84 @@ def test_voice_apps_create_with_optional_fields():
         assert body["secret_id"] == "sec_123"
         assert body["webhook_api_version"] == "2026-06-01"
         assert isinstance(app, VoiceAppResource)
+
+
+def test_voice_apps_create_pins_the_webhook_api_version():
+    """An unset field is defaulted to the old version by the API, so it is always sent."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/apps").mock(
+            return_value=httpx.Response(201, json=APP_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.voice.apps.create(
+            name="App",
+            flow_url="https://example.com/flow",
+            webhook_url="https://example.com/webhook",
+        )
+
+        body = json.loads(route.calls.last.request.content)
+        assert body["webhook_api_version"] == "2026-06-01"
+
+
+def test_voice_apps_update_never_sends_the_webhook_api_version():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.patch(f"{BASE}/voice/apps/va_123").mock(
+            return_value=httpx.Response(200, json=APP_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.voice.apps.update("va_123", name="Renamed")
+
+        assert "webhook_api_version" not in json.loads(
+            route.calls.last.request.content
+        )
+
+
+def test_voice_apps_create_lets_the_caller_override_the_webhook_api_version():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/apps").mock(
+            return_value=httpx.Response(201, json=APP_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.voice.apps.create(
+            name="App",
+            flow_url="https://example.com/flow",
+            webhook_url="https://example.com/webhook",
+            webhook_api_version="2025-08-01",
+        )
+
+        body = json.loads(route.calls.last.request.content)
+        assert body["webhook_api_version"] == "2025-08-01"
+
+
+def test_voice_apps_update_sends_the_webhook_api_version_only_when_asked():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.patch(f"{BASE}/voice/apps/va_123").mock(
+            return_value=httpx.Response(200, json=APP_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        client.voice.apps.update("va_123", webhook_api_version="2026-06-01")
+
+        body = json.loads(route.calls.last.request.content)
+        assert body["webhook_api_version"] == "2026-06-01"
+
+
+def test_voice_apps_reject_an_unknown_webhook_api_version():
+    client = Client(api_key="test_api_key")
+
+    with pytest.raises(exceptions.BadParametersException):
+        client.voice.apps.create(
+            name="App",
+            flow_url="https://example.com/flow",
+            webhook_url="https://example.com/webhook",
+            webhook_api_version="2024-01-01",
+        )
+
+    with pytest.raises(exceptions.BadParametersException):
+        client.voice.apps.update("va_123", webhook_api_version="2024-01-01")
 
 
 def test_voice_apps_create_with_vn_ids():

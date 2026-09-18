@@ -80,6 +80,16 @@ with backends that return the SIP trunk IP ACL fields — see *Fixed* below.
   case-insensitively, so a custom `User-Agent`, `Accept` or `Content-Type` reaches
   the API. `x-api-key` is still always taken from the validated `api_key` argument
   and cannot be displaced by a header.
+- `webhook_api_version` on `client.sip.trunks.create` and
+  `client.voice.apps.create` now defaults to `2026-06-01` instead of being left
+  unset. An unset field is stored as `2025-08-01` by the API, so a create that
+  did not name a version produced a trunk or app on the older payload. Pass the
+  argument explicitly to choose a different accepted version.
+- `webhook_api_version` on `client.sip.trunks.update` and
+  `client.voice.apps.update` is sent only when supplied, so an update that does
+  not name a version leaves the stored one alone rather than migrating it.
+- `webhook_api_version` is validated client-side against the versions the API
+  accepts (`2025-08-01`, `2026-06-01`) and raises `BadParametersException`.
 - Arguments the API rejects are now validated client-side and raise
   `BadParametersException` before the request is sent, rather than surfacing as an
   HTTP error. This covers pagination (`limit` outside 1–100, both cursors at once),
