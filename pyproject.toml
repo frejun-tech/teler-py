@@ -4,13 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "teler"
-version = "0.2.2"
+dynamic = ["version"]
 description = "A helper library for FreJun Teler"
 readme = "README.md"
+# PEP 585 `type[...]` annotations in resources/base.py require 3.9.
+requires-python = ">=3.9"
 license = { file = "LICENSE" }
 authors = [{ name="FreJun", email="robin@frejun.com" }]
-dependencies = ["websockets>=10.0", "httpx>=0.20.0", "respx>=0.18.0"]
-keywords = ["frejun", "teler", "sdk", "voip", "streaming"]
+dependencies = ["websockets>=10.0", "httpx>=0.20.0"]
+keywords = ["frejun", "teler", "sdk", "voip", "streaming", "sip", "siptrunk"]
 
 [project.urls]
 Homepage = "https://github.com/frejun-tech/teler-py"
@@ -19,4 +21,17 @@ Homepage = "https://github.com/frejun-tech/teler-py"
 test = [
   "pytest>=7.0.0",
   "pytest-asyncio>=0.23",
+  "pytest-cov>=4.0",
+  "respx>=0.18.0",
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "teler._version.__version__" }
+
+[tool.setuptools.package-data]
+teler = ["py.typed"]
+
+[tool.pytest.ini_options]
+markers = [
+  "contract: drives the real API over a real socket; needs TELER_BACKEND_PATH",
 ]
