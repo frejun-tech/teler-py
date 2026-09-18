@@ -1,20 +1,15 @@
-from importlib import metadata
 from typing import Dict, Optional
 
 import httpx
 
 from teler import constants, exceptions
+from teler._version import __version__
 from teler.resources.events import (AsyncEventResourceManager, EventResourceManager)
 from teler.resources.recordings import (AsyncRecordingResourceManager, RecordingResourceManager)
 from teler.resources.secrets import (AsyncSecretResourceManager, SecretResourceManager)
 from teler.resources.sip.sip import AsyncSipResourceManager, SipResourceManager
 from teler.resources.virtual_numbers import (AsyncVirtualNumberResourceManager, VirtualNumberResourceManager)
 from teler.resources.voice.voice import AsyncVoiceResourceManager, VoiceResourceManager
-
-try:
-    __version__ = metadata.version("teler")
-except metadata.PackageNotFoundError:
-    __version__ = "0.0.0"
 
 DEFAULT_REQUEST_HEADERS = {
     "Content-Type": "application/json",
