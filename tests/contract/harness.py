@@ -191,3 +191,28 @@ def fake_trunk(name: str = "Main Trunk"):
         secret_id=None,
         secret_name=None,
     )
+
+
+REQUEST_ID = "req_9f8e7d6c5b4a3f2e1d0c9b8a"
+
+
+def fake_transfer(call_id: str, mode: str = "cold", transfer_id: str = None):
+    from app.utils.identifiers import new_operation_id
+
+    return SimpleNamespace(
+        id=transfer_id or new_operation_id(),
+        call_id=call_id,
+        status="initiated",
+        target_leg_id=None,
+        mode=mode,
+        request_id=REQUEST_ID,
+    )
+
+
+def fake_mutation(with_playback: bool = False):
+    from app.utils.identifiers import new_playback_id
+
+    return SimpleNamespace(
+        request_id=REQUEST_ID,
+        playback_id=new_playback_id() if with_playback else None,
+    )

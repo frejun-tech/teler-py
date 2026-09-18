@@ -90,12 +90,15 @@ are the hermetic counterpart to `test_live_routing.py` and share the same
 | `test_live_secrets.py` | full CRUD, rotate flag, prefixed-id parsing |
 | `test_live_virtual_numbers.py` | list filters as repeated query params, assign/unassign, both-targets rejection (client guard *and* real 400) |
 | `test_live_sip.py` | trunk CRUD under `extra="forbid"`, SIP URL and credential validation, transport enum and the udp/credential rule (client guard *and* real 422), call list/retrieve |
+| `test_live_voice.py` | transfer mode and target literals, nested transfer actions under `extra="forbid"`, the play `on_dtmf` literal and the hangup `reason` pattern |
 
 ## Adding a case
 
 Patch the crud function *as the route module sees it* — routes import by name, so
 target `app.api.routes.public.v1.<mod>.<fn>`, except `events`, which does
 `from ...crud import events as crud` and so needs `app.crud.events.<fn>`. The
+voice transfer and mutation routes hand their work to `run_mutation` instead of
+a crud function, so that is what they patch. The
 `patch_crud` fixture takes that dotted path. Fakes are `SimpleNamespace` objects
 shaped for the response model's `from_attributes=True`; pass UUIDs where the
 model has a prefixing validator so you exercise the real conversion.
