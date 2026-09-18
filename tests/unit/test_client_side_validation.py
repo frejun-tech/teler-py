@@ -233,6 +233,64 @@ async def test_async_trunk_create_validates_auth_pairing():
         )
 
 
+# --- SIP trunk authentication_type is checked against the accepted values ---
+@pytest.mark.parametrize(
+    "authentication_type", ["ip", "Credential", "CREDENTIAL", "nonsense", ""]
+)
+def test_trunk_create_rejects_an_unknown_authentication_type(authentication_type):
+    """Without this the pairing checks below silently no-op and send the payload."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/sip/trunks").mock(
+            return_value=httpx.Response(201, json={"id": "st_1"})
+        )
+        client = Client(api_key="test_api_key")
+
+        with pytest.raises(exceptions.BadParametersException) as exc:
+            client.sip.trunks.create(
+                name="T", domain_name="t.example.com",
+                authentication_type=authentication_type,
+                auth_credential=CREDENTIAL,
+            )
+
+        assert exc.value.param == "authentication_type"
+        assert not route.called
+
+
+@pytest.mark.parametrize("authentication_type", ["ip", "nonsense"])
+def test_trunk_update_rejects_an_unknown_authentication_type(authentication_type):
+    client = Client(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException) as exc:
+        client.sip.trunks.update(
+            "st_1", authentication_type=authentication_type,
+            auth_credential=CREDENTIAL,
+        )
+
+    assert exc.value.param == "authentication_type"
+
+
+def test_trunk_update_allows_an_absent_authentication_type():
+    """``None`` on update means the auth is not being changed."""
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.patch(f"{BASE}/sip/trunks/st_1").mock(
+            return_value=httpx.Response(200, json={"id": "st_1"})
+        )
+        client = Client(api_key="test_api_key")
+
+        client.sip.trunks.update("st_1", name="Renamed")
+
+        assert route.called
+
+
+@pytest.mark.asyncio
+async def test_async_trunk_create_rejects_an_unknown_authentication_type():
+    client = AsyncClient(api_key="test_api_key")
+    with pytest.raises(exceptions.BadParametersException):
+        await client.sip.trunks.create(
+            name="T", domain_name="t.example.com", authentication_type="ip",
+            auth_credential=CREDENTIAL,
+        )
+
+
 # --- SIP trunk update auth rules (authentication_type is optional there) ---
 @pytest.mark.parametrize(
     "kwargs",

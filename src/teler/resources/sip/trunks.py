@@ -9,6 +9,7 @@ from teler.resources.base import (
     build_params,
     to_cursor_page,
     unwrap_data,
+    validate_authentication_type,
     validate_webhook_api_version,
 )
 from teler.resources.virtual_numbers import VirtualNumberResource
@@ -76,6 +77,8 @@ def _validate_create_auth_fields(
     ``ip_acl_id`` (a shared, reusable list) — supplying both or neither is
     rejected.
     """
+    validate_authentication_type(authentication_type, required=True)
+
     if authentication_type == "credential":
         if not auth_credential:
             raise exceptions.BadParametersException(
@@ -122,6 +125,8 @@ def _validate_update_auth_fields(
     ``auth_addresses`` list is rejected when empty, whether or not a type is
     given.
     """
+    validate_authentication_type(authentication_type, required=False)
+
     if (
         any([ip_acl_id, auth_addresses, auth_credential])
         and authentication_type is None

@@ -75,6 +75,26 @@ def validate_webhook_api_version(version: Optional[str]) -> None:
         )
 
 
+def validate_authentication_type(value: Optional[str], required: bool) -> None:
+    """Validate a SIP trunk authentication type.
+
+    The values are case-sensitive. ``None`` is rejected when ``required``.
+    """
+    if value is None:
+        if required:
+            raise exceptions.BadParametersException(
+                param="authentication_type",
+                msg="authentication_type is required.",
+            )
+        return
+    if value not in constants.AUTHENTICATION_TYPES:
+        allowed = ", ".join(repr(v) for v in constants.AUTHENTICATION_TYPES)
+        raise exceptions.BadParametersException(
+            param="authentication_type",
+            msg=f"authentication_type must be one of: {allowed}.",
+        )
+
+
 def unwrap_data(body: Dict[str, Any]) -> Dict[str, Any]:
     """Unwrap a ``{"data": {...}}`` envelope if present, else return body as-is."""
     if isinstance(body, dict) and isinstance(body.get("data"), dict):

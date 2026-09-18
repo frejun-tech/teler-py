@@ -375,6 +375,49 @@ def test_create_sends_a_webhook_api_version_the_api_accepts(client, patch_crud, 
     assert captured["version"] == "2026-06-01"
 
 
+def test_unknown_authentication_type_blocked_client_side(client, patch_crud, stub_trunk_lookup):
+    """A value outside the AuthenticationType enum must not reach the API."""
+    called = {"value": False}
+
+    async def _create(db, account_id, trunk_data):
+        called["value"] = True
+        return fake_trunk()
+
+    patch_crud(f"{TRUNKS}.create_sip_trunk", _create)
+
+    with pytest.raises(exceptions.BadParametersException):
+        client.sip.trunks.create(
+            name="T", domain_name="t.example.com",
+            authentication_type="ip", auth_credential=CREDENTIAL,
+        )
+
+    assert called["value"] is False
+
+
+def test_api_also_rejects_an_unknown_authentication_type_when_guard_bypassed(live_api, patch_crud, stub_trunk_lookup):
+    import httpx
+
+    async def _create(db, account_id, trunk_data):
+        return fake_trunk()
+
+    patch_crud(f"{TRUNKS}.create_sip_trunk", _create)
+
+    with httpx.Client(
+        base_url=live_api.base_url, headers={"x-api-key": "test_api_key"}
+    ) as raw:
+        res = raw.post(
+            "/sip/trunks",
+            json={
+                "name": "T",
+                "domain_name": "t.example.com",
+                "authentication_type": "ip",
+                "auth_credential": CREDENTIAL,
+            },
+        )
+
+    assert res.status_code == 422
+
+
 def test_list_trunks_with_status_filter(client, patch_crud, stub_trunk_lookup):
     captured = {}
 
