@@ -1,22 +1,138 @@
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, fields
-from typing import Any, Dict, List, Type
+from abc import ABC
+from dataclasses import dataclass, field
+from dataclasses import fields as dataclass_fields
+from typing import Any, Dict, List, Optional, Type
 
-from .. import exceptions
+from .. import constants, exceptions
 
 
 @dataclass
 class BaseResource(ABC):
-    """Base class for all resource objects."""
+    """Base class for all resource objects.
+
+    Declared fields are set from ``data``; undeclared keys are ignored.
+    ``raw`` holds the full body.
+    """
 
     def __init__(self, data: Dict[str, Any]):
-        # Match only declared fields; raise on extra keys
-        names = {f.name for f in fields(self)}
-        unknown = set(data) - names
-        if unknown:
-            raise TypeError(f"Unknown fields: {unknown}")
-        for field in names:
-            setattr(self, field, data.get(field))
+        names = {f.name for f in dataclass_fields(self)}
+        for name in names:
+            setattr(self, name, data.get(name))
+        # Not a dataclass field: absent from __repr__ and __eq__.
+        self.raw = data
+
+
+@dataclass
+class CursorPage:
+    """A single page of cursor-paginated results.
+
+    Attributes:
+        data (List[Any]): The resource objects on this page.
+        next_cursor (Optional[str]): Cursor for the next page, if any.
+        previous_cursor (Optional[str]): Cursor for the previous page, if any.
+        has_more (bool): Whether more pages are available after this one.
+    """
+
+    data: List[Any] = field(default_factory=list)
+    next_cursor: Optional[str] = None
+    previous_cursor: Optional[str] = None
+    has_more: bool = False
+
+
+def validate_pagination(
+    limit: Optional[int] = None,
+    cursor_after: Optional[str] = None,
+    cursor_before: Optional[str] = None,
+    max_limit: int = 100,
+) -> None:
+    """Validate cursor pagination arguments.
+
+    Raises ``BadParametersException`` if ``limit`` falls outside 1..max_limit
+    or if both cursors are supplied.
+    """
+    if limit is not None and not 1 <= limit <= max_limit:
+        raise exceptions.BadParametersException(
+            param="limit",
+            msg=f"limit must be between 1 and {max_limit}.",
+        )
+    if cursor_after is not None and cursor_before is not None:
+        raise exceptions.BadParametersException(
+            param="cursor_after",
+            msg="cursor_after and cursor_before are mutually exclusive.",
+        )
+
+
+def validate_webhook_api_version(version: Optional[str]) -> None:
+    """Validate a webhook API version against the dated versions the API accepts.
+
+    ``None`` passes unchecked.
+    """
+    if version is not None and version not in constants.WEBHOOK_API_VERSIONS:
+        allowed = ", ".join(constants.WEBHOOK_API_VERSIONS)
+        raise exceptions.BadParametersException(
+            param="webhook_api_version",
+            msg=f"webhook_api_version must be one of: {allowed}.",
+        )
+
+
+def validate_authentication_type(value: Optional[str], required: bool) -> None:
+    """Validate a SIP trunk authentication type.
+
+    The values are case-sensitive. ``None`` is rejected when ``required``.
+    """
+    if value is None:
+        if required:
+            raise exceptions.BadParametersException(
+                param="authentication_type",
+                msg="authentication_type is required.",
+            )
+        return
+    if value not in constants.AUTHENTICATION_TYPES:
+        allowed = ", ".join(repr(v) for v in constants.AUTHENTICATION_TYPES)
+        raise exceptions.BadParametersException(
+            param="authentication_type",
+            msg=f"authentication_type must be one of: {allowed}.",
+        )
+
+
+def unwrap_data(body: Dict[str, Any]) -> Dict[str, Any]:
+    """Unwrap a ``{"data": {...}}`` envelope if present, else return body as-is."""
+    if isinstance(body, dict) and isinstance(body.get("data"), dict):
+        return body["data"]
+    return body
+
+
+def to_cursor_page(
+    body: Dict[str, Any], resource_cls: Type[BaseResource]
+) -> CursorPage:
+    """Wrap a raw list response body into a typed CursorPage of ``resource_cls``."""
+    return CursorPage(
+        data=[resource_cls(item) for item in body.get("data", [])],
+        next_cursor=body.get("next_cursor"),
+        previous_cursor=body.get("previous_cursor"),
+        has_more=body.get("has_more", False),
+    )
+
+
+def build_params(
+    limit: Optional[int] = None,
+    cursor_after: Optional[str] = None,
+    cursor_before: Optional[str] = None,
+    max_limit: int = 100,
+    **filters: Any,
+) -> Dict[str, Any]:
+    """Build query params for a cursor-paginated endpoint, dropping unset values.
+
+    Validates pagination against ``max_limit``.
+    """
+    validate_pagination(limit, cursor_after, cursor_before, max_limit)
+    params: Dict[str, Any] = {
+        **filters,
+        "limit": limit,
+        "cursor_after": cursor_after,
+        "cursor_before": cursor_before,
+    }
+    return {k: v for k, v in params.items() if v is not None}
 
 
 class BaseResourceManager(ABC):
@@ -29,8 +145,7 @@ class BaseResourceManager(ABC):
         self.resource = resource
         self.paths = paths
 
-    @abstractmethod
-    def create(self) -> BaseResource:
+    def create(self, *args, **kwargs) -> BaseResource:
         raise exceptions.NotImplementedException(
             msg="Method 'create()' is not implemented."
         )
@@ -72,14 +187,13 @@ class AsyncBaseResourceManager(ABC):
     """Base class for all async resource managers."""
 
     def __init__(
-        self, client: Any, resource: type[BaseResource], paths: Dict[str, str]
+        self, client: Any, resource: Type[BaseResource], paths: Dict[str, str]
     ):
         self.client = client
         self.resource = resource
         self.paths = paths
 
-    @abstractmethod
-    async def create(self) -> BaseResource:
+    async def create(self, *args, **kwargs) -> BaseResource:
         raise exceptions.NotImplementedException(
             msg="Method 'create()' is not implemented."
         )
@@ -105,7 +219,7 @@ class AsyncBaseResourceManager(ABC):
             raise exceptions.NotImplementedException(
                 msg="Method 'update()' is not implemented."
             )
-        res = self.client.request("PATCH", self.paths["update"].format(id))
+        res = await self.client.request("PATCH", self.paths["update"].format(id))
         return self.resource(res.json())
 
     async def delete(self, id) -> None:

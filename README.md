@@ -14,7 +14,7 @@ from teler import Client
 TELER_API_KEY = 'API_KEY'
 client = Client(TELER_API_KEY)
 
-call = client.calls.create(
+call = client.voice.calls.create(
     from_number="+123*******",
     to_number="+456*******",
     flow_url="https://example.com/flow",
@@ -32,7 +32,7 @@ TELER_API_KEY = 'API_KEY'
 client = AsyncClient(TELER_API_KEY)
 
 async def initiate_call()
-    call = await client.calls.create(
+    call = await client.voice.calls.create(
         from_number="+123*******",
         to_number="+456*******",
         flow_url="https://example.com/flow",
@@ -42,6 +42,28 @@ async def initiate_call()
 
 asyncio.run(initiate_call())
 ```
+
+## Resources
+
+Both `Client` and `AsyncClient` expose the same namespaces, with identical method
+names — the async versions are awaitable.
+
+| Namespace | Methods |
+|---|---|
+| `client.voice.calls` | `create`, `list`, `retrieve`, `list_legs` |
+| `client.voice.apps` | `create`, `list`, `retrieve`, `update`, `delete`, `list_virtual_numbers` |
+| `client.voice.mutations` | `play`, `dtmf`, `mute`, `hangup` |
+| `client.voice.operations` | `transfer` |
+| `client.virtual_numbers` | `list`, `assign`, `unassign`, `update` |
+| `client.sip.trunks` | `create`, `list`, `retrieve`, `update`, `delete`, `list_virtual_numbers` |
+| `client.sip.calls` | `list`, `retrieve` |
+| `client.sip.ip_acls` | `create`, `list`, `retrieve`, `update`, `delete` |
+| `client.secrets` | `create`, `list`, `retrieve`, `update`, `delete` |
+| `client.events` | `list`, `retrieve`, `redeliver` |
+| `client.recordings` | `retrieve` |
+
+List methods are cursor-paginated and return a `CursorPage` with `data`,
+`next_cursor`, `previous_cursor` and `has_more`.
 
 ## Media Streaming
 
@@ -158,14 +180,14 @@ async def webhook_receiver(data: Annotated[dict, Body()]):
     logger.info(f"--------Webhook Payload-------- {data}")
     return JSONResponse(content="Webhook received.")
 
-@router.get("/initiate-call", status_code=status.HTTP_200_OK)
+@router.post("/initiate-call", status_code=status.HTTP_200_OK)
 async def initiate_call():
     """
     Initiate a call using Teler SDK.
     """
     try:
         async with AsyncClient(api_key=TELER_API_KEY, timeout=10) as client:
-            call = await client.calls.create(
+            call = await client.voice.calls.create(
                 from_number=f"{FROM_NUMBER}",
                 to_number=f"{TO_NUMBER}",
                 flow_url=f"https://{BACKEND_DOMAIN}/flow",
