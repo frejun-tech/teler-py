@@ -67,7 +67,7 @@ With `TELER_BACKEND_PATH` unset or pointing nowhere, the whole directory
 **skips**, so `pytest tests/` stays green in CI and in the plain SDK virtualenv.
 
 Setting the variable in an interpreter that lacks the backend's dependencies is a
-different case: those 83 tests **error** rather than skip, because the fixture
+different case: every test here **errors** rather than skips, because the fixture
 only guards the backend import and FastAPI is first needed a step later, when the
 app is built. This is deliberate — an error is a louder signal that the
 environment is set up wrong than a silent skip would be. If you export the
