@@ -12,7 +12,7 @@ requires-python = ">=3.9"
 license = { file = "LICENSE" }
 authors = [{ name="FreJun", email="robin@frejun.com" }]
 dependencies = ["websockets>=10.0", "httpx>=0.20.0"]
-keywords = ["frejun", "teler", "sdk", "voip", "streaming"]
+keywords = ["frejun", "teler", "sdk", "voip", "streaming", "sip", "siptrunk"]
 
 [project.urls]
 Homepage = "https://github.com/frejun-tech/teler-py"
