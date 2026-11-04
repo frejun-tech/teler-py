@@ -5,6 +5,74 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-04
+
+### Added
+
+- **Idempotency support for call initiation and call control.**
+  `client.voice.calls.create`, `client.voice.mutations.*` and
+  `client.voice.operations.transfer` accept optional `idempotency_key`, `retry`
+  and `base_retry_delay_ms` arguments.
+  - A UUID v4 is generated when `idempotency_key` is omitted.
+  - Keys are validated client-side: non-empty and at most 255 characters.
+    Invalid keys raise `BadParametersException` before the request is sent.
+  - `retry` enables retries on network errors and HTTP 429/503 responses for that
+    request.
+
+- **Configurable API base URL.** `TELER_BACKEND_DOMAIN` sets the scheme and host
+  for the whole process; the SDK appends `/api/v1`. A `base_url` argument to
+  `Client` or `AsyncClient` takes precedence.
+
+- **Remote WebSocket headers.** `StreamConnector` accepts `remote_headers`, a
+  mapping of extra HTTP headers sent with the WebSocket handshake to
+  `remote_url` — for example an `Authorization` bearer token or ElevenLabs'
+  `xi-api-key`.
+
+### Changed
+
+- `GET` and `DELETE` requests retry by default (three retries, 100 ms base
+  delay). `POST` and `PATCH` remain opt-in.
+- Retries use exponential backoff with full jitter, capped at 2000 ms, unless the
+  response carries a `Retry-After` header.
+- Call initiation and call-control requests use a 5-second timeout and a 300 ms
+  base retry delay.
+- `websockets>=14.0` is now required (was `>=10.0`); `StreamConnector` uses the
+  `additional_headers` handshake argument.
+
+### Removed
+
+- **`webhook_api_version="2025-08-01"` is no longer accepted.** Only
+  `2026-06-01` is supported. Passing the retired version raises
+  `BadParametersException` before the request is sent. Migrate existing voice
+  apps and SIP trunks:
+
+  ```python
+  client.voice.apps.update(app_id, webhook_api_version="2026-06-01")
+  client.sip.trunks.update(trunk_id, webhook_api_version="2026-06-01")
+  ```
+
+  New resources already default to `2026-06-01`.
+
+### Fixed
+
+- **The `Retry-After` response header was never read.** The retry loop looked for
+  it inside the exception's `details`, which holds the API's `errors` array, so a
+  429/503 response always fell back to the computed backoff. Both clients now read
+  the header from the response.
+
+### Documentation
+
+- Rewrote `README.md` to match the Node SDK's structure while describing the
+  Python SDK's actual behavior: installation, features, client configuration,
+  field naming, pagination, call initiation with idempotency, call flows, call
+  controls, media streaming, logging, and error handling.
+- Fixed the async example, which was missing a colon, did not import `asyncio`,
+  and never closed the client.
+- Fixed stream-handler examples that returned `{}` for `StreamOp.PASS` instead of
+  an empty string.
+- Corrected `tests/contract/README.md`: `BaseResource` ignores undeclared response
+  keys and keeps the full body on `.raw`; it no longer raises `TypeError`.
+
 ## [1.0.0] - 2026-09-18
 
 Completes the SDK's coverage of the public API: every non-deprecated operation in
