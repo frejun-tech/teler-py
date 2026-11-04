@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 import logging
 from enum import Enum
-from typing import Awaitable, Callable, Tuple
+from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
 
 import websockets
 
@@ -29,6 +29,8 @@ class StreamConnector:
     """Media Stream Connector Interface.
 
     Bridges the call stream to a remote websocket via pluggable handlers.
+    ``remote_headers`` are sent during the remote WebSocket handshake, which is
+    how token-authenticated agents are authenticated.
     """
 
     @staticmethod
@@ -41,7 +43,23 @@ class StreamConnector:
         remote_url: str = "",
         call_stream_handler: StreamHandler = _default_stream_handler,
         remote_stream_handler: StreamHandler = _default_stream_handler,
-    ):
+        remote_headers: Optional[Dict[str, str]] = None,
+    ) -> None:
+        """Configure a bridge between a Teler call socket and ``remote_url``.
+
+        Args:
+            stream_type: Only ``StreamType.BIDIRECTIONAL`` is supported.
+            remote_url: WebSocket URL of the remote agent or service.
+            call_stream_handler: Async handler for messages from the call stream.
+            remote_stream_handler: Async handler for messages from the remote stream.
+            remote_headers: Extra HTTP headers sent in the WebSocket handshake to
+                ``remote_url``. Use for bearer tokens or API keys such as
+                ElevenLabs' ``xi-api-key``. Defaults to no extra headers.
+
+        Raises:
+            NotImplementedException: If ``stream_type`` is unidirectional.
+            BadParametersException: If ``remote_url`` is empty.
+        """
         if stream_type == StreamType.UNIDIRECTIONAL:
             raise exceptions.NotImplementedException(
                 msg="Unidirectional streams are not supported yet."
@@ -54,10 +72,26 @@ class StreamConnector:
         self.remote_url = remote_url
         self.call_stream_handler = call_stream_handler
         self.remote_stream_handler = remote_stream_handler
+        self.remote_headers = dict(remote_headers or {})
 
-    async def bridge_stream(self, call_ws) -> None:
-        async with websockets.connect(self.remote_url) as remote_ws:
+    async def bridge_stream(self, call_ws) -> Any:
+        """Bridge ``call_ws`` to the remote WebSocket until either side stops.
 
+        Args:
+            call_ws: The Teler call socket. It must expose ``iter_text()``,
+                ``send_text()`` and ``close()``.
+
+        Returns:
+            The remote WebSocket. It is already closed when this method returns,
+            because the connection is owned by a context manager.
+        """
+        connect_kwargs: Dict[str, object] = {}
+        if self.remote_headers:
+            connect_kwargs["additional_headers"] = self.remote_headers
+
+        async with websockets.connect(
+            self.remote_url, **connect_kwargs
+        ) as remote_ws:
             logger.info(f"[StreamConnector]: connected to {self.remote_url}")
 
             async def call_stream() -> None:
@@ -106,7 +140,7 @@ class StreamConnector:
                         )
                         break
 
-            done, pending = await asyncio.wait(
+            _, pending = await asyncio.wait(
                 [
                     asyncio.create_task(call_stream()),
                     asyncio.create_task(remote_stream()),
@@ -119,3 +153,5 @@ class StreamConnector:
                     await t
 
             logger.info("[StreamConnector]: bridge closed")
+
+        return remote_ws

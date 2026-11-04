@@ -115,6 +115,23 @@ class TestStreamConnector:
         assert connector.call_stream_handler == custom_handler
         assert connector.remote_stream_handler == custom_handler
 
+    def test_init_defaults_remote_headers_to_empty_dict(self):
+        """Remote headers default to an empty mapping."""
+        connector = StreamConnector(remote_url="ws://example.com/stream")
+
+        assert connector.remote_headers == {}
+
+    def test_init_copies_remote_headers(self):
+        """Mutating the caller's header dict must not affect the connector."""
+        headers = {"Authorization": "Bearer token"}
+        connector = StreamConnector(
+            remote_url="ws://example.com/stream", remote_headers=headers
+        )
+
+        headers["Authorization"] = "changed"
+
+        assert connector.remote_headers == {"Authorization": "Bearer token"}
+
     def test_init_missing_remote_url_raises_exception(self):
         """Test that initialization without remote_url raises BadParametersException."""
         with pytest.raises(exceptions.BadParametersException) as exc_info:
@@ -154,6 +171,22 @@ class TestStreamConnector:
         )
 
         mock_connect.assert_called_once_with(remote_url)
+
+    @pytest.mark.asyncio
+    async def test_bridge_stream_sends_remote_headers(self):
+        """Configured headers are forwarded in the remote handshake."""
+        headers = {"Authorization": "Bearer token", "xi-api-key": "secret"}
+        connector = StreamConnector(
+            remote_url="ws://example.com/stream", remote_headers=headers
+        )
+
+        mock_connect = await run_bridge(
+            connector, FakeCallWS(), FakeRemoteWS(hang=True)
+        )
+
+        mock_connect.assert_called_once_with(
+            "ws://example.com/stream", additional_headers=headers
+        )
 
     @pytest.mark.asyncio
     async def test_bridge_stream_websocket_connection_error(self):
