@@ -407,21 +407,23 @@ def test_update_never_sends_the_webhook_api_version():
         )
 
 
-def test_create_lets_the_caller_override_the_webhook_api_version():
+def test_create_rejects_the_legacy_webhook_api_version():
     with respx.mock(assert_all_called=False) as respx_mock:
         route = respx_mock.post(f"{BASE}/sip/trunks").mock(
             return_value=httpx.Response(201, json=TRUNK_JSON)
         )
         client = Client(api_key="test_api_key")
 
-        client.sip.trunks.create(
-            name="T", domain_name="t.example.com",
-            authentication_type="credential", auth_credential=CREDENTIAL,
-            webhook_api_version="2025-08-01",
-        )
+        with pytest.raises(exceptions.BadParametersException) as exc:
+            client.sip.trunks.create(
+                name="T", domain_name="t.example.com",
+                authentication_type="credential", auth_credential=CREDENTIAL,
+                webhook_api_version="2025-08-01",
+            )
 
-        body = json.loads(route.calls.last.request.content)
-        assert body["webhook_api_version"] == "2025-08-01"
+        assert exc.value.param == "webhook_api_version"
+        assert "2026-06-01" in exc.value.message
+        assert not route.called
 
 
 def test_update_sends_the_webhook_api_version_only_when_asked():
