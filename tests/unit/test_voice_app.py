@@ -4,12 +4,13 @@ import httpx
 import pytest
 import respx
 
+from src.teler.constants import BASE_URL
 from teler import AsyncClient, Client, exceptions
 from teler.resources.base import CursorPage
 from teler.resources.voice.types import VoiceAppResource, DeleteResult
 from teler.resources.virtual_numbers import VirtualNumberResource
 
-BASE = "https://api.frejun.ai/api/v1"
+BASE = f"{BASE_URL}/api/v1"
 
 APP_JSON = {
     "id": "va_123",

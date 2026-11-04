@@ -2,11 +2,12 @@ import httpx
 import pytest
 import respx
 
+from src.teler.constants import BASE_URL
 from teler import AsyncClient, Client
 from teler.resources.base import CursorPage
 from teler.resources.events import EventRedeliverResult, EventResource
 
-BASE = "https://api.frejun.ai/api/v1"
+BASE = f"{BASE_URL}/api/v1"
 
 EVENT_JSON = {
     "id": "evt_123",

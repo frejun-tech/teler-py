@@ -2,9 +2,10 @@ import httpx
 import pytest
 import respx
 
+from src.teler.constants import BASE_URL
 from teler import AsyncClient, Client, exceptions
 
-BASE = "https://api.frejun.ai/api/v1"
+BASE = f"{BASE_URL}/api/v1"
 
 
 @pytest.mark.parametrize(
