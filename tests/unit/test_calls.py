@@ -2,11 +2,13 @@ import httpx
 import pytest
 import respx
 
+from src.teler.constants import BASE_URL
 from teler import AsyncClient, Client
 from teler.resources.base import CursorPage
 from teler.resources.voice.types import CallLegResource, CreateCallResource
 
-BASE = "https://api.frejun.ai/api/v1"
+
+BASE = f"{BASE_URL}/api/v1"
 
 
 def test_call_create_hits_route_and_returns_call_resource():
@@ -24,8 +26,8 @@ def test_call_create_hits_route_and_returns_call_resource():
         data = {
             "from_number": "+123456789",
             "to_number": "+123456789",
-            "flow_url": "https://api.frejun.ai/flow",
-            "status_callback_url": "https://api.frejun.ai/status",
+            "flow_url": f"{BASE_URL}/flow",
+            "status_callback_url": f"{BASE_URL}/status",
             "record": True,
         }
 
@@ -51,8 +53,8 @@ async def test_async_call_create_hits_route_and_returns_call_resource():
         data = {
             "from_number": "+123456789",
             "to_number": "+987654321",
-            "flow_url": "https://api.frejun.ai/flow",
-            "status_callback_url": "https://api.frejun.ai/status",
+            "flow_url": f"{BASE_URL}/flow",
+            "status_callback_url": f"{BASE_URL}/status",
             "record": True,
         }
 
