@@ -1,4 +1,6 @@
-from typing import Dict, Optional
+import random
+import time
+from typing import Any, Dict, Optional
 
 import httpx
 
@@ -85,6 +87,33 @@ def _merge_headers(
     return merged
 
 
+def _parse_retry_after(header_value: Optional[str]) -> Optional[float]:
+    if not header_value:
+        return None
+    # Try seconds first
+    try:
+        # Check if it's all digits (possibly with spaces)
+        seconds = float(str(header_value).strip())
+        if seconds >= 0:
+            return seconds * 1000.0
+    except Exception:
+        pass
+    # Try HTTP date
+    try:
+        from email.utils import parsedate_to_datetime
+
+        dt = parsedate_to_datetime(header_value)
+        if dt is not None:
+            import datetime
+
+            now = datetime.datetime.now(datetime.timezone.utc)
+            delay = (dt - now).total_seconds() * 1000.0
+            return max(0.0, delay)
+    except Exception:
+        pass
+    return None
+
+
 class Client:
     """
     Synchronous HTTP Client for the Teler API.
@@ -127,6 +156,74 @@ class Client:
         """
         Make a synchronous HTTP request using the underlying httpx.Client.
         """
+        # Extract retry options
+        retry = kwargs.pop("retry", None)
+        base_retry_delay_ms = kwargs.pop("base_retry_delay_ms", None)
+        max_retry_delay_ms = kwargs.pop("max_retry_delay_ms", None)
+        timeout = kwargs.pop("timeout", None)
+
+        method = args[0] if len(args) > 0 else kwargs.get("method", "")
+
+        # Set defaults based on method
+        if retry is None:
+            method_upper = str(method).upper()
+            if method_upper in ("GET", "DELETE"):
+                retry = True
+                if base_retry_delay_ms is None:
+                    base_retry_delay_ms = 100
+            else:  # POST, PATCH, etc.
+                retry = False
+                if base_retry_delay_ms is None:
+                    base_retry_delay_ms = 500
+        elif base_retry_delay_ms is None:
+            base_retry_delay_ms = 500
+
+        if max_retry_delay_ms is None:
+            max_retry_delay_ms = getattr(constants, "MAX_RETRY_DELAY_MS", 2000)
+
+        max_retries = getattr(constants, "RETRY_COUNT", 3) if retry else 0
+
+        # Apply timeout if provided
+        if timeout is not None and "timeout" not in kwargs:
+            kwargs["timeout"] = timeout / 1000.0 if timeout > 1000 else timeout
+
+        if max_retries == 0:
+            res = self.httpx_client.request(*args, **kwargs)
+            _raise_for_status(res)
+            return res
+
+        last_exc = None
+        for attempt in range(max_retries + 1):
+            res = None
+            try:
+                res = self.httpx_client.request(*args, **kwargs)
+                _raise_for_status(res)
+                return res
+            except (httpx.RequestError, exceptions.TelerException) as exc:
+                last_exc = exc
+                # Check if retryable
+                retryable = False
+                if isinstance(exc, httpx.RequestError):
+                    retryable = True
+                elif isinstance(exc, exceptions.TelerException) and hasattr(exc, "code"):
+                    if exc.code in (429, 503):
+                        retryable = True
+                if not retryable or attempt == max_retries:
+                    raise
+                # Calculate delay. Retry-After is a response header, so read it
+                # from the response itself rather than from the exception body.
+                retry_after_ms = None
+                if res is not None:
+                    retry_after_ms = _parse_retry_after(
+                        res.headers.get("retry-after")
+                    )
+                exponential_delay = min(
+                    max_retry_delay_ms, base_retry_delay_ms * (2**attempt)
+                )
+                delay_ms = retry_after_ms if retry_after_ms is not None else random.random() * exponential_delay
+                time.sleep(delay_ms / 1000.0)
+        if last_exc:
+            raise last_exc
         res = self.httpx_client.request(*args, **kwargs)
         _raise_for_status(res)
         return res
@@ -192,6 +289,72 @@ class AsyncClient:
         """
         Make an asynchronous HTTP request using the underlying httpx.AsyncClient.
         """
+        retry = kwargs.pop("retry", None)
+        base_retry_delay_ms = kwargs.pop("base_retry_delay_ms", None)
+        max_retry_delay_ms = kwargs.pop("max_retry_delay_ms", None)
+        timeout = kwargs.pop("timeout", None)
+
+        method = args[0] if len(args) > 0 else kwargs.get("method", "")
+
+        if retry is None:
+            method_upper = str(method).upper()
+            if method_upper in ("GET", "DELETE"):
+                retry = True
+                if base_retry_delay_ms is None:
+                    base_retry_delay_ms = 100
+            else:
+                retry = False
+                if base_retry_delay_ms is None:
+                    base_retry_delay_ms = 500
+        elif base_retry_delay_ms is None:
+            base_retry_delay_ms = 500
+
+        if max_retry_delay_ms is None:
+            max_retry_delay_ms = getattr(constants, "MAX_RETRY_DELAY_MS", 2000)
+
+        max_retries = getattr(constants, "RETRY_COUNT", 3) if retry else 0
+
+        if timeout is not None and "timeout" not in kwargs:
+            kwargs["timeout"] = timeout / 1000.0 if timeout > 1000 else timeout
+
+        if max_retries == 0:
+            res = await self.httpx_client.request(*args, **kwargs)
+            _raise_for_status(res)
+            return res
+
+        last_exc = None
+        for attempt in range(max_retries + 1):
+            res = None
+            try:
+                res = await self.httpx_client.request(*args, **kwargs)
+                _raise_for_status(res)
+                return res
+            except (httpx.RequestError, exceptions.TelerException) as exc:
+                last_exc = exc
+                retryable = False
+                if isinstance(exc, httpx.RequestError):
+                    retryable = True
+                elif isinstance(exc, exceptions.TelerException) and hasattr(exc, "code"):
+                    if exc.code in (429, 503):
+                        retryable = True
+                if not retryable or attempt == max_retries:
+                    raise
+                # Retry-After is a response header, so read it from the response
+                # itself rather than from the exception body.
+                retry_after_ms = None
+                if res is not None:
+                    retry_after_ms = _parse_retry_after(
+                        res.headers.get("retry-after")
+                    )
+                exponential_delay = min(
+                    max_retry_delay_ms, base_retry_delay_ms * (2**attempt)
+                )
+                delay_ms = retry_after_ms if retry_after_ms is not None else random.random() * exponential_delay
+                import asyncio
+
+                await asyncio.sleep(delay_ms / 1000.0)
+        if last_exc:
+            raise last_exc
         res = await self.httpx_client.request(*args, **kwargs)
         _raise_for_status(res)
         return res

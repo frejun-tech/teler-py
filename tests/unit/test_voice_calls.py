@@ -166,6 +166,71 @@ def test_voice_calls_create_defaults_record_to_true():
         assert isinstance(call, CreateCallResource)
 
 
+def test_voice_calls_create_with_idempotency_key():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/initiate").mock(
+            return_value=httpx.Response(202, json=CREATE_CALL_RESPONSE)
+        )
+        client = Client(api_key="test_api_key")
+
+        call = client.voice.calls.create(
+            from_number="+15550001111",
+            to_number="+15550002222",
+            flow_url="https://example.com/flow",
+            status_callback_url="https://example.com/callback",
+            record=True,
+            idempotency_key="idem_call_123",
+        )
+
+        assert route.called
+        headers = route.calls.last.request.headers
+        assert headers["Idempotency-Key"] == "idem_call_123"
+        assert isinstance(call, CreateCallResource)
+
+
+def test_voice_calls_create_auto_generates_idempotency_key():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/initiate").mock(
+            return_value=httpx.Response(202, json=CREATE_CALL_RESPONSE)
+        )
+        client = Client(api_key="test_api_key")
+
+        call = client.voice.calls.create(
+            from_number="+15550001111",
+            to_number="+15550002222",
+            flow_url="https://example.com/flow",
+            status_callback_url="https://example.com/callback",
+            record=True,
+        )
+
+        assert route.called
+        headers = route.calls.last.request.headers
+        assert "Idempotency-Key" in headers
+        assert len(headers["Idempotency-Key"]) == 36
+        assert isinstance(call, CreateCallResource)
+
+
+def test_voice_calls_create_with_retry_parameters():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/initiate").mock(
+            return_value=httpx.Response(202, json=CREATE_CALL_RESPONSE)
+        )
+        client = Client(api_key="test_api_key")
+
+        call = client.voice.calls.create(
+            from_number="+15550001111",
+            to_number="+15550002222",
+            flow_url="https://example.com/flow",
+            status_callback_url="https://example.com/callback",
+            record=True,
+            retry=True,
+            base_retry_delay_ms=200,
+        )
+
+        assert route.called
+        assert isinstance(call, CreateCallResource)
+
+
 @pytest.mark.asyncio
 async def test_async_voice_calls_create_returns_resource():
     with respx.mock(assert_all_called=False) as respx_mock:

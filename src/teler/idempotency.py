@@ -1,9 +1,10 @@
 import uuid
 from typing import Optional
 
-from teler.exceptions import UnprocessableRequestException
+from teler import constants
+from teler.exceptions import BadParametersException
 
-IDEMPOTENCY_KEY_MAX_LEN = 255
+IDEMPOTENCY_KEY_MAX_LEN = getattr(constants, "IDEMPOTENCY_KEY_MAX_LEN", 255)
 
 
 def resolve_idempotency_key(key: Optional[str] = None) -> str:
@@ -15,12 +16,13 @@ def resolve_idempotency_key(key: Optional[str] = None) -> str:
     if key is None:
         return str(uuid.uuid4())
     if len(key) == 0:
-        raise UnprocessableRequestException(
-            "Idempotency-Key must not be empty. A UUID is recommended."
+        raise BadParametersException(
+            param="Idempotency-Key",
+            msg="Idempotency-Key must not be empty. A UUID is recommended.",
         )
     if len(key) > IDEMPOTENCY_KEY_MAX_LEN:
-        raise UnprocessableRequestException(
-            f"Idempotency-Key must not exceed {IDEMPOTENCY_KEY_MAX_LEN} characters "
-            f"(got {len(key)})."
+        raise BadParametersException(
+            param="Idempotency-Key",
+            msg=f"Idempotency-Key must not exceed {IDEMPOTENCY_KEY_MAX_LEN} characters (got {len(key)}).",
         )
     return key
