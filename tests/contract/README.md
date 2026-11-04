@@ -15,8 +15,9 @@ indexes, so SQLite is not an option) and S3.
 SDK even when it is wrong. That is exactly how the recordings bug survived: the
 SDK asked for `/recordings/`, the API serves `/recordings`, and the mock was
 written against the trailing-slash path. Real routing catches that class of bug,
-plus anything the API's validators reject and any response key the SDK's
-dataclasses fail to declare (`BaseResource` raises `TypeError` on unknown keys).
+plus anything the API's validators reject and any response shape the SDK's
+dataclasses fail to model. Undeclared response keys are ignored rather than
+raising, and the full response body is preserved on `.raw`.
 
 ## Running them
 

@@ -21,7 +21,8 @@ This document outlines the coding standards and best practices for the `teler-sd
 - Each public class and method must have a clear, concise docstring describing its purpose and usage.
 - Use type annotations for all function/method parameters and return types.
 - Use `@dataclass` for simple data containers.
-- Resource managers should be instantiated in the client classes and exposed as attributes (e.g., `client.calls`).
+- Resource managers should be instantiated in the client classes and exposed as attributes (e.g., `client.voice.calls`).
+- Public API names use `snake_case` to match the API wire format; no key conversion is performed.
 - Use `Any` or string-based type annotations for cross-module references that could cause circular imports.
 
 ## 4. **Error Handling**
@@ -54,6 +55,16 @@ This document outlines the coding standards and best practices for the `teler-sd
 - All public classes, methods, and modules must have docstrings.
 - Keep the README up to date with usage examples for both sync and async clients.
 - Document all exceptions that can be raised by public methods.
+- Keep the README section structure aligned with the Node SDK (`teler-sdk-node`):
+  What is Teler, Requirements, Features, Installation, Basic Usage, Client
+  Configuration, Resources, Field Naming, Pagination, Call Initiation with
+  Idempotency, Call Flows, Call Controls & Mutations, Media Streaming, Logging,
+  Error Handling.
+- Describe what the Python SDK actually does. Do not copy Node-only behavior
+  (camelCase conversion, auto-pagination, injectable loggers, heartbeat handling)
+  into the Python documentation.
+- Document idempotency and retry arguments (`idempotency_key`, `retry`,
+  `base_retry_delay_ms`) wherever a public method accepts them.
 
 ## 10. **Deprecation and Backward Compatibility**
 - Mark deprecated methods/classes clearly in the docstring and with warnings if possible.
