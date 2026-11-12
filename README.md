@@ -99,9 +99,9 @@ Headers passed to the constructor override the SDK defaults (`Content-Type`,
 `Accept`, `User-Agent`), matched case-insensitively. `x-api-key` is always taken
 from `api_key` and cannot be displaced by a header.
 
-`timeout` is passed through to `httpx`. Values greater than `1000` are treated as
-milliseconds, so `timeout=10` and `timeout=10000` both mean ten seconds. Any other
-keyword argument is forwarded to `httpx.Client` / `httpx.AsyncClient`.
+`timeout` is passed through to `httpx`, which expects **seconds**, so the
+`timeout=10` above means ten seconds. Any other keyword argument is also forwarded
+to `httpx.Client` / `httpx.AsyncClient`.
 
 The client defaults to the production API. Set `TELER_BACKEND_DOMAIN` to point a
 whole process at another deployment:
@@ -279,10 +279,12 @@ call = client.voice.calls.create(
 # If this call needs to be retried, use the same idempotency_key.
 ```
 
-Requests other than call initiation and call control retry as follows: `GET` and
-`DELETE` retry by default (three retries, 100 ms base delay); `POST` and `PATCH`
-are opt-in. When the API sends a `Retry-After` header on a 429 or 503, the SDK
-waits for that duration instead of the computed backoff.
+Requests other than call initiation and call control retry as follows: `GET`
+retries by default (three retries, 100 ms base delay); `POST`, `PATCH` and
+`DELETE` are opt-in via `retry=True`. `DELETE` is not retried by default because a
+retry after a lost response would turn a successful delete into a `404`. When the
+API sends a `Retry-After` header on a 429 or 503, the SDK waits for that duration
+instead of the computed backoff.
 
 ## Call Flows
 
@@ -509,7 +511,8 @@ async def handle_call(call_ws):
 
 `call_ws` must expose `iter_text()`, `send()`, `send_text()` and `close()` — a
 FastAPI/Starlette `WebSocket` works as-is. When either side stops, the other task
-is cancelled and the remote socket is closed.
+is cancelled and the remote socket is closed. The method returns `None`; the
+remote socket lives only for the duration of the call.
 
 Authenticated remote endpoints pass their credentials through `remote_headers`:
 

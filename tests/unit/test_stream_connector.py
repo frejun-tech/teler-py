@@ -173,6 +173,18 @@ class TestStreamConnector:
         mock_connect.assert_called_once_with(remote_url)
 
     @pytest.mark.asyncio
+    async def test_bridge_stream_returns_none(self):
+        """The remote socket is private; callers do not get a stale handle."""
+        connector = StreamConnector(remote_url="ws://example.com/stream")
+
+        with patched_connect(FakeRemoteWS(hang=True)):
+            result = await asyncio.wait_for(
+                connector.bridge_stream(FakeCallWS()), 2.0
+            )
+
+        assert result is None
+
+    @pytest.mark.asyncio
     async def test_bridge_stream_sends_remote_headers(self):
         """Configured headers are forwarded in the remote handshake."""
         headers = {"Authorization": "Bearer token", "xi-api-key": "secret"}

@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 import logging
 from enum import Enum
-from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
+from typing import Awaitable, Callable, Dict, Optional, Tuple
 
 import websockets
 
@@ -74,16 +74,15 @@ class StreamConnector:
         self.remote_stream_handler = remote_stream_handler
         self.remote_headers = dict(remote_headers or {})
 
-    async def bridge_stream(self, call_ws) -> Any:
+    async def bridge_stream(self, call_ws) -> None:
         """Bridge ``call_ws`` to the remote WebSocket until either side stops.
 
         Args:
             call_ws: The Teler call socket. It must expose ``iter_text()``,
                 ``send_text()`` and ``close()``.
 
-        Returns:
-            The remote WebSocket. It is already closed when this method returns,
-            because the connection is owned by a context manager.
+        The remote connection is opened and closed inside this method, so there
+        is no socket to hand back to the caller.
         """
         connect_kwargs: Dict[str, object] = {}
         if self.remote_headers:
@@ -153,5 +152,3 @@ class StreamConnector:
                     await t
 
             logger.info("[StreamConnector]: bridge closed")
-
-        return remote_ws

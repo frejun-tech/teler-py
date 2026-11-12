@@ -5,7 +5,7 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2026-11-04
+## [1.1.0] - 2026-11-08
 
 ### Added
 
@@ -30,14 +30,26 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `GET` and `DELETE` requests retry by default (three retries, 100 ms base
-  delay). `POST` and `PATCH` remain opt-in.
+- `GET` requests retry by default (three retries, 100 ms base delay). `POST`,
+  `PATCH` and `DELETE` are opt-in via `retry=True`. `DELETE` is not retried
+  because a retry after a lost response would turn a successful delete into a
+  `404`.
 - Retries use exponential backoff with full jitter, capped at 2000 ms, unless the
   response carries a `Retry-After` header.
 - Call initiation and call-control requests use a 5-second timeout and a 300 ms
   base retry delay.
+- **Invalid idempotency keys now raise `BadParametersException`.**
+  They previously raised `UnprocessableRequestException`. Code that catches the
+  old type should catch `BadParametersException` (or `TelerException`) instead.
+- **`client.voice.calls.create` no longer accepts compatibility shims.** The four
+  identifying arguments are required again, and the camelCase aliases
+  (`fromNumber`, `toNumber`, `flowUrl`, `statusCallbackUrl`, ...), the dict-as-
+  first-argument form and positional shifting have been removed. Calls that
+  relied on them now raise `TypeError` instead of silently sending a partial
+  payload.
 - `websockets>=14.0` is now required (was `>=10.0`); `StreamConnector` uses the
-  `additional_headers` handshake argument.
+  `additional_headers` handshake argument. If your deployment pins an older
+  `websockets`, raise that pin before upgrading.
 
 ### Removed
 
@@ -54,6 +66,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   New resources already default to `2026-06-01`.
 
 ### Fixed
+
+- **Request timeouts are always milliseconds.** The clients used to guess the
+  unit (`timeout / 1000.0 if timeout > 1000 else timeout`), so an explicit
+  `timeout=500` was treated as 500 seconds. Values are now divided by 1000
+  unconditionally.
 
 - **The `Retry-After` response header was never read.** The retry loop looked for
   it inside the exception's `details`, which holds the API's `errors` array, so a

@@ -43,77 +43,22 @@ class CallResourceManager(BaseResourceManager):
 
     def create(
         self,
-        from_number: str = None,
-        to_number: str = None,
-        flow_url: str = None,
-        status_callback_url: str = None,
+        from_number: str,
+        to_number: str,
+        flow_url: str,
+        status_callback_url: str,
         record: bool = True,
         idempotency_key: Optional[str] = None,
         retry: Optional[bool] = None,
         base_retry_delay_ms: Optional[int] = None,
-        *args: Any,
-        **kwargs: Any,
     ) -> CreateCallResource:
-        # Allow alternative calling conventions
-        if "fromNumber" in kwargs:
-            from_number = kwargs.pop("fromNumber")
-        if "toNumber" in kwargs:
-            to_number = kwargs.pop("toNumber")
-        if "flowUrl" in kwargs:
-            flow_url = kwargs.pop("flowUrl")
-        if "statusCallbackUrl" in kwargs:
-            status_callback_url = kwargs.pop("statusCallbackUrl")
-        if "idempotencyKey" in kwargs and idempotency_key is None:
-            idempotency_key = kwargs.pop("idempotencyKey")
-        if "baseRetryDelayMs" in kwargs and base_retry_delay_ms is None:
-            base_retry_delay_ms = kwargs.pop("baseRetryDelayMs")
-        if "idempotency_key" in kwargs and idempotency_key is None:
-            idempotency_key = kwargs.pop("idempotency_key")
-
-        # Handle positional args for flexibility (e.g., if called with different patterns)
-        # Check if first arg after self is a dict
-        if isinstance(from_number, dict):
-            payload_dict = from_number
-            from_number = payload_dict.get("from_number") or payload_dict.get("fromNumber")
-            to_number = payload_dict.get("to_number") or payload_dict.get("toNumber")
-            flow_url = payload_dict.get("flow_url") or payload_dict.get("flowUrl")
-            status_callback_url = payload_dict.get("status_callback_url") or payload_dict.get("statusCallbackUrl")
-            if record is True and "record" in payload_dict:
-                record = payload_dict.get("record")
-            # shift args
-            if len(args) > 0 and idempotency_key is None:
-                idempotency_key = args[0]
-            if len(args) > 1 and retry is None:
-                retry = args[1]
-            if len(args) > 2 and base_retry_delay_ms is None:
-                base_retry_delay_ms = args[2]
-        else:
-            # Shift positional args if they were passed in non-standard positions
-            # e.g., (from, to, flow, status, record, idempotency_key, ...)
-            idx = 0
-            # args start from 6th positional effectively
-            if len(args) > idx and idempotency_key is None and isinstance(args[idx], str):
-                idempotency_key = args[idx]
-                idx += 1
-            elif len(args) > idx and idempotency_key is None:
-                # might be bool
-                pass
-            if len(args) > idx and retry is None and isinstance(args[idx], bool):
-                retry = args[idx]
-                idx += 1
-            if len(args) > idx and base_retry_delay_ms is None and isinstance(args[idx], int):
-                base_retry_delay_ms = args[idx]
-                idx += 1
-
         payload = _build_create_payload(
             from_number,
             to_number,
             flow_url,
             status_callback_url,
-            record if record is not None else True,
+            record,
         )
-        if payload.get("record") is None:
-            payload["record"] = True
 
         key = resolve_idempotency_key(idempotency_key)
         headers = {"Idempotency-Key": key}
@@ -196,68 +141,22 @@ class AsyncCallResourceManager(AsyncBaseResourceManager):
 
     async def create(
         self,
-        from_number: str = None,
-        to_number: str = None,
-        flow_url: str = None,
-        status_callback_url: str = None,
+        from_number: str,
+        to_number: str,
+        flow_url: str,
+        status_callback_url: str,
         record: bool = True,
         idempotency_key: Optional[str] = None,
         retry: Optional[bool] = None,
         base_retry_delay_ms: Optional[int] = None,
-        *args: Any,
-        **kwargs: Any,
     ) -> CreateCallResource:
-        if "fromNumber" in kwargs:
-            from_number = kwargs.pop("fromNumber")
-        if "toNumber" in kwargs:
-            to_number = kwargs.pop("toNumber")
-        if "flowUrl" in kwargs:
-            flow_url = kwargs.pop("flowUrl")
-        if "statusCallbackUrl" in kwargs:
-            status_callback_url = kwargs.pop("statusCallbackUrl")
-        if "idempotencyKey" in kwargs and idempotency_key is None:
-            idempotency_key = kwargs.pop("idempotencyKey")
-        if "baseRetryDelayMs" in kwargs and base_retry_delay_ms is None:
-            base_retry_delay_ms = kwargs.pop("baseRetryDelayMs")
-        if "idempotency_key" in kwargs and idempotency_key is None:
-            idempotency_key = kwargs.pop("idempotency_key")
-
-        if isinstance(from_number, dict):
-            payload_dict = from_number
-            from_number = payload_dict.get("from_number") or payload_dict.get("fromNumber")
-            to_number = payload_dict.get("to_number") or payload_dict.get("toNumber")
-            flow_url = payload_dict.get("flow_url") or payload_dict.get("flowUrl")
-            status_callback_url = payload_dict.get("status_callback_url") or payload_dict.get("statusCallbackUrl")
-            if record is True and "record" in payload_dict:
-                record = payload_dict.get("record")
-            if len(args) > 0 and idempotency_key is None:
-                idempotency_key = args[0]
-            if len(args) > 1 and retry is None:
-                retry = args[1]
-            if len(args) > 2 and base_retry_delay_ms is None:
-                base_retry_delay_ms = args[2]
-        else:
-            idx = 0
-            if len(args) > idx and idempotency_key is None and isinstance(args[idx], str) and not isinstance(args[idx], bool):
-                # Could be idempotency key
-                idempotency_key = args[idx]
-                idx += 1
-            elif len(args) > idx and retry is None and isinstance(args[idx], bool):
-                retry = args[idx]
-                idx += 1
-            if len(args) > idx and base_retry_delay_ms is None and isinstance(args[idx], int) and not isinstance(args[idx], bool):
-                base_retry_delay_ms = args[idx]
-                idx += 1
-
         payload = _build_create_payload(
             from_number,
             to_number,
             flow_url,
             status_callback_url,
-            record if record is not None else True,
+            record,
         )
-        if payload.get("record") is None:
-            payload["record"] = True
 
         key = resolve_idempotency_key(idempotency_key)
         headers = {"Idempotency-Key": key}

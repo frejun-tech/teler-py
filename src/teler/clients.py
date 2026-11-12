@@ -166,12 +166,11 @@ class Client:
 
         # Set defaults based on method
         if retry is None:
-            method_upper = str(method).upper()
-            if method_upper in ("GET", "DELETE"):
+            if str(method).upper() == "GET":
                 retry = True
                 if base_retry_delay_ms is None:
                     base_retry_delay_ms = 100
-            else:  # POST, PATCH, etc.
+            else:  # POST, PATCH, DELETE, etc.
                 retry = False
                 if base_retry_delay_ms is None:
                     base_retry_delay_ms = 500
@@ -184,15 +183,15 @@ class Client:
         max_retries = getattr(constants, "RETRY_COUNT", 3) if retry else 0
 
         # Apply timeout if provided
-        if timeout is not None and "timeout" not in kwargs:
-            kwargs["timeout"] = timeout / 1000.0 if timeout > 1000 else timeout
+        if timeout is not None:
+            # Request timeouts are milliseconds; httpx expects seconds.
+            kwargs["timeout"] = timeout / 1000.0
 
         if max_retries == 0:
             res = self.httpx_client.request(*args, **kwargs)
             _raise_for_status(res)
             return res
 
-        last_exc = None
         for attempt in range(max_retries + 1):
             res = None
             try:
@@ -200,7 +199,6 @@ class Client:
                 _raise_for_status(res)
                 return res
             except (httpx.RequestError, exceptions.TelerException) as exc:
-                last_exc = exc
                 # Check if retryable
                 retryable = False
                 if isinstance(exc, httpx.RequestError):
@@ -222,11 +220,6 @@ class Client:
                 )
                 delay_ms = retry_after_ms if retry_after_ms is not None else random.random() * exponential_delay
                 time.sleep(delay_ms / 1000.0)
-        if last_exc:
-            raise last_exc
-        res = self.httpx_client.request(*args, **kwargs)
-        _raise_for_status(res)
-        return res
 
     def close(self):
         """
@@ -297,12 +290,11 @@ class AsyncClient:
         method = args[0] if len(args) > 0 else kwargs.get("method", "")
 
         if retry is None:
-            method_upper = str(method).upper()
-            if method_upper in ("GET", "DELETE"):
+            if str(method).upper() == "GET":
                 retry = True
                 if base_retry_delay_ms is None:
                     base_retry_delay_ms = 100
-            else:
+            else:  # POST, PATCH, DELETE, etc.
                 retry = False
                 if base_retry_delay_ms is None:
                     base_retry_delay_ms = 500
@@ -314,15 +306,15 @@ class AsyncClient:
 
         max_retries = getattr(constants, "RETRY_COUNT", 3) if retry else 0
 
-        if timeout is not None and "timeout" not in kwargs:
-            kwargs["timeout"] = timeout / 1000.0 if timeout > 1000 else timeout
+        if timeout is not None:
+            # Request timeouts are milliseconds; httpx expects seconds.
+            kwargs["timeout"] = timeout / 1000.0
 
         if max_retries == 0:
             res = await self.httpx_client.request(*args, **kwargs)
             _raise_for_status(res)
             return res
 
-        last_exc = None
         for attempt in range(max_retries + 1):
             res = None
             try:
@@ -330,7 +322,6 @@ class AsyncClient:
                 _raise_for_status(res)
                 return res
             except (httpx.RequestError, exceptions.TelerException) as exc:
-                last_exc = exc
                 retryable = False
                 if isinstance(exc, httpx.RequestError):
                     retryable = True
@@ -353,11 +344,6 @@ class AsyncClient:
                 import asyncio
 
                 await asyncio.sleep(delay_ms / 1000.0)
-        if last_exc:
-            raise last_exc
-        res = await self.httpx_client.request(*args, **kwargs)
-        _raise_for_status(res)
-        return res
 
     async def aclose(self):
         """

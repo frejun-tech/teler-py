@@ -37,6 +37,43 @@ def test_call_create_hits_route_and_returns_call_resource():
         assert isinstance(call, CreateCallResource)
 
 
+def test_call_create_requires_the_identifying_arguments():
+    client = Client(api_key="test_api_key")
+
+    with pytest.raises(TypeError):
+        client.voice.calls.create(
+            to_number="+123456789",
+            flow_url=f"{BASE_URL}/flow",
+            status_callback_url=f"{BASE_URL}/status",
+        )
+
+
+def test_call_create_rejects_unknown_keyword_arguments():
+    """A typo must fail locally rather than send a call with no callback URL."""
+    client = Client(api_key="test_api_key")
+
+    with pytest.raises(TypeError):
+        client.voice.calls.create(
+            from_number="+123456789",
+            to_number="+123456789",
+            flow_url=f"{BASE_URL}/flow",
+            status_callbak_url=f"{BASE_URL}/status",
+            status_callback_url=f"{BASE_URL}/status",
+        )
+
+
+def test_call_create_rejects_camel_case_arguments():
+    client = Client(api_key="test_api_key")
+
+    with pytest.raises(TypeError):
+        client.voice.calls.create(
+            fromNumber="+123456789",
+            toNumber="+123456789",
+            flowUrl=f"{BASE_URL}/flow",
+            statusCallbackUrl=f"{BASE_URL}/status",
+        )
+
+
 @pytest.mark.asyncio
 async def test_async_call_create_hits_route_and_returns_call_resource():
     with respx.mock(assert_all_called=False) as respx_mock:
