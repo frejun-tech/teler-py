@@ -1,5 +1,7 @@
 from typing import Any, Dict, Optional, cast
 
+from teler import constants
+from teler.idempotency import resolve_idempotency_key
 from teler.resources.base import (
     AsyncBaseResourceManager,
     BaseResourceManager,
@@ -46,6 +48,9 @@ class CallResourceManager(BaseResourceManager):
         flow_url: str,
         status_callback_url: str,
         record: bool = True,
+        idempotency_key: Optional[str] = None,
+        retry: Optional[bool] = None,
+        base_retry_delay_ms: Optional[int] = None,
     ) -> CreateCallResource:
         payload = _build_create_payload(
             from_number,
@@ -54,10 +59,33 @@ class CallResourceManager(BaseResourceManager):
             status_callback_url,
             record,
         )
+
+        key = resolve_idempotency_key(idempotency_key)
+        headers = {"Idempotency-Key": key}
+
+        request_kwargs: Dict[str, Any] = {
+            "json": payload,
+            "headers": headers,
+        }
+
+        # Pass through retry options if provided
+        if retry is not None:
+            request_kwargs["retry"] = retry
+        if base_retry_delay_ms is not None:
+            request_kwargs["base_retry_delay_ms"] = base_retry_delay_ms
+        else:
+            request_kwargs["base_retry_delay_ms"] = getattr(
+                constants, "CALL_CONTROL_RETRY_BASE_DELAY_MS", 300
+            )
+        request_kwargs["max_retry_delay_ms"] = getattr(
+            constants, "MAX_RETRY_DELAY_MS", 2000
+        )
+        request_kwargs["timeout"] = getattr(constants, "CALL_CONTROL_TIMEOUT_MS", 5000)
+
         res = self.client.request(
             "POST",
             self.paths["create"],
-            json=payload,
+            **request_kwargs,
         )
         return CreateCallResource(unwrap_data(res.json()))
 
@@ -118,6 +146,9 @@ class AsyncCallResourceManager(AsyncBaseResourceManager):
         flow_url: str,
         status_callback_url: str,
         record: bool = True,
+        idempotency_key: Optional[str] = None,
+        retry: Optional[bool] = None,
+        base_retry_delay_ms: Optional[int] = None,
     ) -> CreateCallResource:
         payload = _build_create_payload(
             from_number,
@@ -126,10 +157,32 @@ class AsyncCallResourceManager(AsyncBaseResourceManager):
             status_callback_url,
             record,
         )
+
+        key = resolve_idempotency_key(idempotency_key)
+        headers = {"Idempotency-Key": key}
+
+        request_kwargs: Dict[str, Any] = {
+            "json": payload,
+            "headers": headers,
+        }
+
+        if retry is not None:
+            request_kwargs["retry"] = retry
+        if base_retry_delay_ms is not None:
+            request_kwargs["base_retry_delay_ms"] = base_retry_delay_ms
+        else:
+            request_kwargs["base_retry_delay_ms"] = getattr(
+                constants, "CALL_CONTROL_RETRY_BASE_DELAY_MS", 300
+            )
+        request_kwargs["max_retry_delay_ms"] = getattr(
+            constants, "MAX_RETRY_DELAY_MS", 2000
+        )
+        request_kwargs["timeout"] = getattr(constants, "CALL_CONTROL_TIMEOUT_MS", 5000)
+
         res = await self.client.request(
             "POST",
             self.paths["create"],
-            json=payload,
+            **request_kwargs,
         )
         return CreateCallResource(unwrap_data(res.json()))
 

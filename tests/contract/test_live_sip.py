@@ -357,7 +357,7 @@ def test_api_also_rejects_an_empty_auth_address_list_when_guard_bypassed(live_ap
 
 
 def test_create_sends_a_webhook_api_version_the_api_accepts(client, patch_crud, stub_trunk_lookup):
-    """create_sip_trunk falls back to 2025-08-01 when the field arrives unset."""
+    """create_sip_trunk defaults to the current webhook API version when unset."""
     captured = {}
 
     async def _create(db, account_id, trunk_data):

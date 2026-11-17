@@ -141,22 +141,24 @@ def test_voice_apps_update_never_sends_the_webhook_api_version():
         )
 
 
-def test_voice_apps_create_lets_the_caller_override_the_webhook_api_version():
+def test_voice_apps_reject_the_legacy_webhook_api_version():
     with respx.mock(assert_all_called=False) as respx_mock:
         route = respx_mock.post(f"{BASE}/voice/apps").mock(
             return_value=httpx.Response(201, json=APP_JSON)
         )
         client = Client(api_key="test_api_key")
 
-        client.voice.apps.create(
-            name="App",
-            flow_url="https://example.com/flow",
-            webhook_url="https://example.com/webhook",
-            webhook_api_version="2025-08-01",
-        )
+        with pytest.raises(exceptions.BadParametersException) as exc:
+            client.voice.apps.create(
+                name="App",
+                flow_url="https://example.com/flow",
+                webhook_url="https://example.com/webhook",
+                webhook_api_version="2025-08-01",
+            )
 
-        body = json.loads(route.calls.last.request.content)
-        assert body["webhook_api_version"] == "2025-08-01"
+        assert exc.value.param == "webhook_api_version"
+        assert "2026-06-01" in exc.value.message
+        assert not route.called
 
 
 def test_voice_apps_update_sends_the_webhook_api_version_only_when_asked():
