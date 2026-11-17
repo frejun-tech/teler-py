@@ -4,12 +4,13 @@ import httpx
 import pytest
 import respx
 
+from src.teler.constants import BASE_URL
 from teler import AsyncClient, Client, exceptions
 from teler.resources.base import CursorPage
 from teler.resources.sip.ip_acls import MAX_ENTRIES_PER_IP_ACL
 from teler.resources.sip.types import DeleteResult, IpAclResource
 
-BASE = "https://api.frejun.ai/api/v1"
+BASE = f"{BASE_URL}/api/v1"
 
 ACL_JSON = {
     "id": "acl_01JQ8Z9K7M3N2P4R5S6T7V8WST",

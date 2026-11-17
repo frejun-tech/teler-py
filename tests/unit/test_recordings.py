@@ -2,10 +2,11 @@ import httpx
 import pytest
 import respx
 
+from src.teler.constants import BASE_URL
 from teler import AsyncClient, Client, exceptions
 from teler.resources.recordings import RecordingResource
 
-BASE = "https://api.frejun.ai/api/v1"
+BASE = f"{BASE_URL}/api/v1"
 SIGNED_URL = "https://storage.example.com/rec_123.mp3?sig=abc"
 
 

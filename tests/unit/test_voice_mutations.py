@@ -4,10 +4,11 @@ import httpx
 import pytest
 import respx
 
+from src.teler.constants import BASE_URL
 from teler import AsyncClient, Client
 from teler.resources.voice.types import MutationResource
 
-BASE = "https://api.frejun.ai/api/v1"
+BASE = f"{BASE_URL}/api/v1"
 
 MUTATION_JSON = {
     "request_id": "req_123",
@@ -99,6 +100,40 @@ def test_voice_mutations_hangup_with_idempotency_key():
         assert isinstance(result, MutationResource)
 
 
+def test_voice_mutations_hangup_auto_generates_idempotency_key():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/hangup").mock(
+            return_value=httpx.Response(202, json=MUTATION_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        result = client.voice.mutations.hangup("cs_123")
+
+        assert route.called
+        headers = route.calls.last.request.headers
+        assert "Idempotency-Key" in headers
+        # Should be a UUID-like format
+        assert len(headers["Idempotency-Key"]) == 36
+        assert isinstance(result, MutationResource)
+
+
+def test_voice_mutations_hangup_with_retry_parameters():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/hangup").mock(
+            return_value=httpx.Response(202, json=MUTATION_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        result = client.voice.mutations.hangup(
+            "cs_123",
+            retry=True,
+            base_retry_delay_ms=100,
+        )
+
+        assert route.called
+        assert isinstance(result, MutationResource)
+
+
 @pytest.mark.asyncio
 async def test_async_voice_mutations_hangup_returns_resource():
     with respx.mock(assert_all_called=False) as respx_mock:
@@ -171,6 +206,41 @@ def test_voice_mutations_mute_with_idempotency_key():
         assert route.called
         headers = route.calls.last.request.headers
         assert headers["Idempotency-Key"] == "idem_456"
+        assert isinstance(result, MutationResource)
+
+
+def test_voice_mutations_mute_auto_generates_idempotency_key():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/mute").mock(
+            return_value=httpx.Response(202, json=MUTATION_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        result = client.voice.mutations.mute("cs_123", leg_id="cl_456", on=True)
+
+        assert route.called
+        headers = route.calls.last.request.headers
+        assert "Idempotency-Key" in headers
+        assert len(headers["Idempotency-Key"]) == 36
+        assert isinstance(result, MutationResource)
+
+
+def test_voice_mutations_mute_with_retry_parameters():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/mute").mock(
+            return_value=httpx.Response(202, json=MUTATION_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        result = client.voice.mutations.mute(
+            "cs_123",
+            leg_id="cl_456",
+            on=True,
+            retry=True,
+            base_retry_delay_ms=150,
+        )
+
+        assert route.called
         assert isinstance(result, MutationResource)
 
 
@@ -262,6 +332,40 @@ def test_voice_mutations_dtmf_with_idempotency_key():
         assert route.called
         headers = route.calls.last.request.headers
         assert headers["Idempotency-Key"] == "idem_dtmf"
+        assert isinstance(result, MutationResource)
+
+
+def test_voice_mutations_dtmf_auto_generates_idempotency_key():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/dtmf").mock(
+            return_value=httpx.Response(202, json=MUTATION_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        result = client.voice.mutations.dtmf("cs_123", digits="321")
+
+        assert route.called
+        headers = route.calls.last.request.headers
+        assert "Idempotency-Key" in headers
+        assert len(headers["Idempotency-Key"]) == 36
+        assert isinstance(result, MutationResource)
+
+
+def test_voice_mutations_dtmf_with_retry_parameters():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/dtmf").mock(
+            return_value=httpx.Response(202, json=MUTATION_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        result = client.voice.mutations.dtmf(
+            "cs_123",
+            digits="123",
+            retry=True,
+            base_retry_delay_ms=200,
+        )
+
+        assert route.called
         assert isinstance(result, MutationResource)
 
 
@@ -401,6 +505,43 @@ def test_voice_mutations_play_with_all_options():
         assert body["on_dtmf"] == "stop"
         headers = route.calls.last.request.headers
         assert headers["Idempotency-Key"] == "idem_play"
+        assert isinstance(result, MutationResource)
+
+
+def test_voice_mutations_play_auto_generates_idempotency_key():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/play").mock(
+            return_value=httpx.Response(202, json=PLAYBACK_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        result = client.voice.mutations.play(
+            "cs_123",
+            media_url="https://example.com/audio.mp3",
+        )
+
+        assert route.called
+        headers = route.calls.last.request.headers
+        assert "Idempotency-Key" in headers
+        assert len(headers["Idempotency-Key"]) == 36
+        assert isinstance(result, MutationResource)
+
+
+def test_voice_mutations_play_with_retry_parameters():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/play").mock(
+            return_value=httpx.Response(202, json=PLAYBACK_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        result = client.voice.mutations.play(
+            "cs_123",
+            media_url="https://example.com/audio.mp3",
+            retry=True,
+            base_retry_delay_ms=250,
+        )
+
+        assert route.called
         assert isinstance(result, MutationResource)
 
 

@@ -5,11 +5,12 @@ import httpx
 import pytest
 import respx
 
+from src.teler.constants import BASE_URL
 from teler import AsyncClient, Client, exceptions
 from teler.resources.base import (AsyncBaseResourceManager, BaseResource,
                                    BaseResourceManager, validate_pagination)
 
-BASE = "https://api.frejun.ai/api/v1"
+BASE = f"{BASE_URL}/api/v1"
 
 PATHS: Dict[str, str] = {
     "list": "/widgets",

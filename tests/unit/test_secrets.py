@@ -4,11 +4,12 @@ import httpx
 import pytest
 import respx
 
+from src.teler.constants import BASE_URL
 from teler import AsyncClient, Client
 from teler.resources.base import CursorPage
 from teler.resources.secrets import DeleteResult, SecretResource
 
-BASE = "https://api.frejun.ai/api/v1"
+BASE = f"{BASE_URL}/api/v1"
 
 SECRET_JSON = {
     "id": "sk_123",

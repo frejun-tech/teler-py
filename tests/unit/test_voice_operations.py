@@ -4,10 +4,11 @@ import httpx
 import pytest
 import respx
 
+from src.teler.constants import BASE_URL
 from teler import AsyncClient, Client
 from teler.resources.voice.types import TransferResource
 
-BASE = "https://api.frejun.ai/api/v1"
+BASE = f"{BASE_URL}/api/v1"
 
 TRANSFER_JSON = {
     "id": "op_123",
@@ -289,6 +290,45 @@ def test_voice_operations_transfer_with_idempotency_key():
         assert route.called
         headers = route.calls.last.request.headers
         assert headers["Idempotency-Key"] == "idem_xfer_123"
+        assert isinstance(result, TransferResource)
+
+
+def test_voice_operations_transfer_auto_generates_idempotency_key():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        result = client.voice.operations.transfer(
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
+        )
+
+        assert route.called
+        headers = route.calls.last.request.headers
+        assert "Idempotency-Key" in headers
+        assert len(headers["Idempotency-Key"]) == 36
+        assert isinstance(result, TransferResource)
+
+
+def test_voice_operations_transfer_with_retry_parameters():
+    with respx.mock(assert_all_called=False) as respx_mock:
+        route = respx_mock.post(f"{BASE}/voice/calls/cs_123/transfer").mock(
+            return_value=httpx.Response(202, json=TRANSFER_JSON)
+        )
+        client = Client(api_key="test_api_key")
+
+        result = client.voice.operations.transfer(
+            "cs_123",
+            target={"kind": "pstn", "number": "+15550003333"},
+            mode="cold",
+            retry=True,
+            base_retry_delay_ms=300,
+        )
+
+        assert route.called
         assert isinstance(result, TransferResource)
 
 

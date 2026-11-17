@@ -9,9 +9,11 @@ import httpx
 import pytest
 import respx
 
+from src.teler.constants import BASE_URL
 from teler import AsyncClient, Client, exceptions
 
-BASE = "https://api.frejun.ai/api/v1"
+
+BASE = f"{BASE_URL}/api/v1"
 
 CREDENTIAL = {"username": "sipuser", "password": "sippass"}
 ADDRESS = {"name": "gw-1", "address": "10.0.0.1"}
